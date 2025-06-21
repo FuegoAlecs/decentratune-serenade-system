@@ -4,8 +4,8 @@ import { Play, Wallet } from "lucide-react";
 
 export function HeroSection() {
   return (
-    {/* Mobile first: padding and text size for small screens. Breakpoints for larger screens. */}
     <div className="relative bg-gradient-hero py-12 px-4 md:py-20 md:px-6 rounded-3xl mb-8">
+      {/* This is a correctly formatted JSX comment: Mobile first: padding and text size for small screens. Breakpoints for larger screens. */}
       <div className="max-w-4xl mx-auto text-center">
         <div className="mb-4 md:mb-6">
           {/* Adjusted padding and margin for badge */}
