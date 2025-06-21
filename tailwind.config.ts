@@ -93,6 +93,14 @@ export default {
 				success: 'var(--color-success)',
 				error: 'var(--color-error)',
 
+				// DecentraTune specific colors defined via CSS variables
+        'dt-primary': 'var(--dt-primary)',
+        'dt-primary-dark': 'var(--dt-primary-dark)',
+        'dt-secondary': 'var(--dt-secondary)',
+        'dt-accent': 'var(--dt-accent)',
+        'dt-gray-light': 'var(--dt-gray-light)',
+        'dt-dark': 'var(--dt-dark)',
+
 				// Original dt colors can be removed or kept if still needed for specific old components
 				// For now, we'll comment them out to prioritize the new theme.
 				// dt: {

@@ -114,18 +114,6 @@
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
   }
 
-  .text-dt-primary {
-    color: var(--dt-primary);
-  }
-
-  .text-dt-secondary {
-    color: var(--dt-secondary);
-  }
-
-  .text-dt-gray-light {
-    color: var(--dt-gray-light);
-  }
-
   .glass-card {
     @apply bg-white/10 backdrop-blur-md border border-white/20;
   }
