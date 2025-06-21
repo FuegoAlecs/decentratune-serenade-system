@@ -5,25 +5,31 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  // Base styles: mobile-first focus, padding, font size.
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs sm:text-sm font-medium ring-offset-light-background dark:ring-offset-dark-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-3 sm:[&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // Default variant uses new accent colors and gradients
+        default:
+          "bg-light-accent-primary text-white hover:bg-light-accent-hover dark:bg-dark-accent-primary dark:hover:bg-dark-accent-hover dark:text-dark-text-primary bg-accent-gradient-light dark:bg-accent-gradient-dark",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-light-error text-white hover:bg-light-error/90 dark:bg-dark-error dark:text-dark-text-primary dark:hover:bg-dark-error/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-light-borders-lines bg-transparent hover:bg-light-accent-primary/10 hover:text-light-accent-primary dark:border-dark-borders-lines dark:hover:bg-dark-accent-primary/20 dark:hover:text-dark-accent-primary",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-light-text-secondary/10 text-light-text-secondary hover:bg-light-text-secondary/20 dark:bg-dark-text-secondary/20 dark:text-dark-text-secondary dark:hover:bg-dark-text-secondary/30",
+        ghost:
+          "hover:bg-light-accent-primary/10 hover:text-light-accent-primary dark:hover:bg-dark-accent-primary/20 dark:hover:text-dark-accent-primary",
+        link:
+          "text-light-accent-primary underline-offset-4 hover:underline dark:text-dark-accent-primary",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        // Mobile first sizes, then sm+
+        default: "h-9 px-3 py-1.5 sm:h-10 sm:px-4 sm:py-2", // Adjusted for mobile
+        sm: "h-8 rounded-md px-2.5 sm:h-9 sm:px-3", // Adjusted for mobile
+        lg: "h-10 rounded-md px-6 sm:h-11 sm:px-8", // Adjusted for mobile
+        icon: "h-9 w-9 sm:h-10 sm:w-10", // Adjusted for mobile
       },
     },
     defaultVariants: {

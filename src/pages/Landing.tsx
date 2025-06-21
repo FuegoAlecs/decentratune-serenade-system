@@ -31,62 +31,79 @@ const trendingTracks = [
 ];
 
 export default function Landing() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // State for dark mode, defaulting to system preference or true (dark)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const storedPreference = localStorage.getItem('theme');
+      if (storedPreference) {
+        return storedPreference === 'dark';
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true; // Default to dark if window is not available (SSR)
+  });
+
   const [isLoaded, setIsLoaded] = useState(false);
   const { playTrack } = useAudio();
 
   useEffect(() => {
     setIsLoaded(true);
-  }, []);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   const handlePlayPreview = (track: any) => {
     playTrack(track, true);
   };
 
-  // Assuming isDarkMode is always true as per the new theme. This can be removed or refactored.
-  // Forcing dark mode based on new theme
-  useEffect(() => {
-    setIsDarkMode(true);
-    document.documentElement.classList.add('dark'); // Ensure dark class is on HTML for global styles
-    setIsLoaded(true);
-  }, []);
-
   return (
-    // Removed template literal for class, always dark. Added px-4 for mobile padding.
-    <div className={`min-h-screen transition-colors duration-300 bg-gradient-dark text-white px-4 sm:px-6 lg:px-8`}>
+    // Apply Tailwind classes for background and text based on theme.
+    // These will use the CSS variables defined in index.css which are switched by the 'dark' class on <html>
+    <div className="min-h-screen bg-light-background dark:bg-dark-background text-light-text-primary dark:text-dark-text-primary transition-colors duration-300 px-4 sm:px-6 lg:px-8">
       {/* Header: Added mobile padding (p-4), md breakpoint for larger padding (p-6) */}
       <header className="flex items-center justify-between p-4 md:p-6">
         {/* Logo and title: Ensure text size is responsive */}
         <div className={`flex items-center space-x-2 sm:space-x-3 transition-all duration-500 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg sm:rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-200">
-            <span className="text-white font-bold text-lg sm:text-xl">D</span>
+          {/* Updated logo to use themeable gradient */}
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-accent-gradient-light dark:bg-accent-gradient-dark rounded-lg sm:rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-200">
+            <span className="text-white font-bold text-lg sm:text-xl">D</span> {/* Consider making D's color themeable if needed */}
           </div>
           <h1 className="font-satoshi font-bold text-xl sm:text-2xl">DecentraTune</h1>
         </div>
         
-        {/* Right side of header: Ensure WalletConnection is responsive if it's not already */}
+        {/* Right side of header: Theme toggle button and WalletConnection */}
         <div className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-500 delay-200 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-          {/* Dark mode toggle button removed as per theme requirement, kept WalletConnection */}
-          {/* <Button
+          <Button
             variant="ghost"
-            size="sm"
-            onClick={() => setIsDarkMode(!isDarkMode)} // This logic would be removed or changed
-            className="hover:bg-white/10 hover:scale-110 transition-all duration-200"
+            size="icon" // Using icon size for a compact button
+            onClick={toggleTheme}
+            className="text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-card-surface/50 dark:hover:bg-dark-card-surface/50 hover:scale-110 transition-all duration-200"
+            aria-label="Toggle theme"
           >
             {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button> */}
-          <WalletConnection /> {/* Assume WalletConnection is already responsive or will be handled separately */}
+          </Button>
+          <WalletConnection />
         </div>
       </header>
 
-      {/* Hero Section: py-10 for mobile, md:py-20. px-4 already on parent, can remove here if not needed */}
+      {/* Hero Section: py-10 for mobile, md:py-20. */}
       <section className="text-center py-10 md:py-20">
         <div className="max-w-4xl mx-auto">
           <div className={`transition-all duration-700 delay-300 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             {/* Headline text size: mobile text-4xl, sm:text-5xl, md:text-6xl, lg:text-8xl */}
             <h1 className="font-satoshi font-black text-4xl sm:text-5xl md:text-6xl lg:text-8xl mb-4 md:mb-6">
               Stream.{" "}
-              <span className="bg-gradient-to-r from-dt-primary to-dt-secondary bg-clip-text text-transparent">
+              {/* Apply themeable gradient for "Own." span */}
+              <span className="bg-accent-gradient-light dark:bg-accent-gradient-dark bg-clip-text text-transparent">
                 Own.
               </span>{" "}
               Earn.
@@ -94,7 +111,7 @@ export default function Landing() {
           </div>
           
           {/* Paragraph text size: mobile text-lg, md:text-xl. max-w for mobile and up */}
-          <p className={`text-lg md:text-xl text-dt-gray-light mb-6 md:mb-8 max-w-sm sm:max-w-md md:max-w-2xl mx-auto transition-all duration-700 delay-500 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+          <p className={`text-lg md:text-xl text-light-text-secondary dark:text-dark-text-secondary mb-6 md:mb-8 max-w-sm sm:max-w-md md:max-w-2xl mx-auto transition-all duration-700 delay-500 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             The first truly decentralized music platform where artists mint tracks as NFTs 
             and fans collect exclusive music while supporting creators directly.
           </p>
@@ -102,22 +119,24 @@ export default function Landing() {
           {/* Buttons: flex-col default, sm:flex-row. Buttons full width on mobile, auto on sm+ */}
           <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 md:mb-12 transition-all duration-700 delay-700 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <Link to="/explore" className="w-full sm:w-auto">
+              {/* Using .btn-primary which should now be themeable from index.css */}
               <Button className="btn-primary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 hover:scale-105 transition-all duration-200 w-full">
                 <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Explore Music
               </Button>
             </Link>
-            <Button variant="outline" className="btn-secondary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 hover:scale-105 transition-all duration-200 w-full sm:w-auto">
+             {/* Using .btn-secondary which should now be themeable from index.css */}
+            <Button className="btn-secondary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 hover:scale-105 transition-all duration-200 w-full sm:w-auto">
               Learn More
             </Button>
           </div>
 
           {/* Audio Visualizer: Consider reducing number of bars on mobile if it looks too crowded */}
           <div className={`flex justify-center space-x-1 transition-all duration-700 delay-900 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            {[...Array(window.innerWidth < 640 ? 10 : 15)].map((_, i) => ( // Example: Fewer bars on small screens
+            {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 15)].map((_, i) => ( // Example: Fewer bars on small screens
               <div
                 key={i}
-                className="wave-bar bg-dt-primary w-1 rounded-full"
+                className="wave-bar bg-light-accent-primary dark:bg-dark-accent-primary w-1 rounded-full"
                 style={{ animationDelay: `${i * 0.1}s` }}
               />
             ))}

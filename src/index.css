@@ -5,98 +5,99 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Satoshi:wght@400;500;600;700;800;900&display=swap');
 
-/* DecentraTune Design System */
-
+/* New Dual Theme CSS Variables */
 @layer base {
   :root {
-    /* Dark Blue Theme */
-    --background: 0 0 0; /* Black */
-    --foreground: 255 255 255; /* White */
-    --card: 10 25 47; /* Dark Blue (Primary) */
-    --card-foreground: 255 255 255; /* White */
-    --popover: 10 25 47; /* Dark Blue (Primary) */
-    --popover-foreground: 255 255 255; /* White */
-    --primary: 10 25 47; /* Dark Blue (Primary) */
-    --primary-foreground: 255 255 255; /* White */
-    --secondary: 0 71 171; /* Cobalt Blue (Secondary Accent) */
-    --secondary-foreground: 255 255 255; /* White */
-    --muted: 0 0 0; /* Black */
-    --muted-foreground: 209 213 219; /* Light Gray for muted text on black bg */
-    --accent: 16 52 166; /* Egyptian Blue (Accent) */
-    --accent-foreground: 255 255 255; /* White */
-    --destructive: 239 68 68; /* Existing Red */
-    --destructive-foreground: 255 255 255; /* White */
-    --border: 0 71 171; /* Cobalt Blue for borders */
-    --input: 10 25 47; /* Dark Blue for input backgrounds */
-    --ring: 16 52 166; /* Egyptian Blue for rings */
+    /* Light Mode (Default) */
+    --color-background: #F9FAFB;
+    --color-card-surface: #FFFFFF;
+    --color-text-primary: #111827;
+    --color-text-secondary: #6B7280;
+    --color-accent-primary: #7C3AED;
+    --color-accent-hover: #6D28D9;
+    --color-accent-gradient: linear-gradient(90deg, #7C3AED, #9333EA);
+    --color-borders-lines: #E5E7EB;
+    --color-success: #16A34A;
+    --color-error: #DC2626;
+    --color-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.05); /* For light theme card shadow */
+    --color-glass-layer-bg: rgba(255, 255, 255, 0.6); /* Light mode glass, adjust if needed */
+
+
+    /* ShadCN UI Theme Variables - Light Mode */
+    --background: 249 250 251; /* #F9FAFB */
+    --foreground: 17 24 39;    /* #111827 */
+    --card: 255 255 255;       /* #FFFFFF */
+    --card-foreground: 17 24 39; /* #111827 */
+    --popover: 255 255 255;    /* #FFFFFF */
+    --popover-foreground: 17 24 39; /* #111827 */
+    --primary: 124 58 237;     /* #7C3AED */
+    --primary-foreground: 245 245 245; /* #F5F5F5 (for text on primary bg) */
+    --secondary: 107 114 128;  /* #6B7280 (using text-secondary as a base for this) */
+    --secondary-foreground: 245 245 245; /* #F5F5F5 (text on secondary bg) */
+    --muted: 229 231 235;      /* #E5E7EB (borders/lines color) */
+    --muted-foreground: 107 114 128; /* #6B7280 (text-secondary) */
+    --accent: 124 58 237;      /* #7C3AED */
+    --accent-foreground: 245 245 245; /* #F5F5F5 */
+    --destructive: 220 38 38;  /* #DC2626 */
+    --destructive-foreground: 245 245 245; /* #F5F5F5 */
+    --border: 229 231 235;     /* #E5E7EB */
+    --input: 229 231 235;      /* #E5E7EB */
+    --ring: 124 58 237;        /* #7C3AED */
     --radius: 0.75rem;
-
-    /* Sidebar specific vars - using the new theme */
-    --sidebar-background: 0 0 0; /* Black */
-    --sidebar-foreground: 255 255 255; /* White */
-    --sidebar-primary: 10 25 47; /* Dark Blue */
-    --sidebar-primary-foreground: 255 255 255; /* White */
-    --sidebar-accent: 16 52 166; /* Egyptian Blue */
-    --sidebar-accent-foreground: 255 255 255; /* White */
-    --sidebar-border: 0 71 171; /* Cobalt Blue */
-    --sidebar-ring: 16 52 166; /* Egyptian Blue */
-
-    /* Custom DecentraTune Variables (Updated with new theme) */
-    --dt-primary: #0A192F; /* Dark Blue (Primary) */
-    --dt-primary-dark: #0A192F; /* Dark Blue (Primary) */
-    --dt-secondary: #0047AB; /* Cobalt Blue (Secondary Accent) */
-    --dt-accent: #1034A6; /* Egyptian Blue (Accent) */
-    --dt-gray-light: #D1D5DB; /* Light Gray */
-    --dt-dark: #000000; /* Black */
-    --dt-white: #FFFFFF; /* White */
   }
 
-  /* The .dark class will now be the default, so we can remove its specific overrides if they are identical to :root,
-     or adjust if we want a slightly different dark variant (though the request is for a singular dark theme) */
   .dark {
-    --background: 0 0 0; /* Black */
-    --foreground: 255 255 255; /* White */
-    --card: 10 25 47; /* Dark Blue (Primary) */
-    --card-foreground: 255 255 255; /* White */
-    --popover: 10 25 47; /* Dark Blue (Primary) */
-    --popover-foreground: 255 255 255; /* White */
-    --primary: 10 25 47; /* Dark Blue (Primary) */
-    --primary-foreground: 255 255 255; /* White */
-    --secondary: 0 71 171; /* Cobalt Blue (Secondary Accent) */
-    --secondary-foreground: 255 255 255; /* White */
-    --muted: 0 0 0; /* Black */
-    --muted-foreground: 209 213 219; /* Light Gray for muted text on black bg */
-    --accent: 16 52 166; /* Egyptian Blue (Accent) */
-    --accent-foreground: 255 255 255; /* White */
-    --destructive: 239 68 68; /* Existing Red */
-    --destructive-foreground: 255 255 255; /* White */
-    --border: 0 71 171; /* Cobalt Blue for borders */
-    --input: 10 25 47; /* Dark Blue for input backgrounds */
-    --ring: 16 52 166; /* Egyptian Blue for rings */
+    /* Dark Mode */
+    --color-background: #0B0C10;
+    --color-card-surface: #1C1E26;
+    --color-text-primary: #F5F5F5;
+    --color-text-secondary: #9CA3AF;
+    --color-accent-primary: #7C3AED;
+    --color-accent-hover: #9F67FF;
+    --color-accent-gradient: linear-gradient(90deg, #7C3AED, #6366F1);
+    --color-borders-lines: #2A2F3A;
+    --color-success: #22C55E;
+    --color-error: #EF4444;
+    --color-card-shadow: none; /* Typically no shadow or different shadow in dark mode */
+    --color-glass-layer-bg: rgba(28, 30, 38, 0.6);
 
-    --sidebar-background: 0 0 0; /* Black */
-    --sidebar-foreground: 255 255 255; /* White */
-    --sidebar-primary: 10 25 47; /* Dark Blue */
-    --sidebar-primary-foreground: 255 255 255; /* White */
-    --sidebar-accent: 16 52 166; /* Egyptian Blue */
-    --sidebar-accent-foreground: 255 255 255; /* White */
-    --sidebar-border: 0 71 171; /* Cobalt Blue */
-    --sidebar-ring: 16 52 166; /* Egyptian Blue */
+    /* ShadCN UI Theme Variables - Dark Mode */
+    --background: 11 12 16;     /* #0B0C10 */
+    --foreground: 245 245 245;  /* #F5F5F5 */
+    --card: 28 30 38;         /* #1C1E26 */
+    --card-foreground: 245 245 245; /* #F5F5F5 */
+    --popover: 28 30 38;      /* #1C1E26 */
+    --popover-foreground: 245 245 245; /* #F5F5F5 */
+    --primary: 124 58 237;      /* #7C3AED */
+    --primary-foreground: 245 245 245; /* #F5F5F5 */
+    --secondary: 156 163 175;   /* #9CA3AF (using text-secondary as a base) */
+    --secondary-foreground: 11 12 16; /* #0B0C10 (text on secondary bg) */
+    --muted: 42 47 58;        /* #2A2F3A (borders/lines color) */
+    --muted-foreground: 156 163 175; /* #9CA3AF (text-secondary) */
+    --accent: 124 58 237;       /* #7C3AED */
+    --accent-foreground: 245 245 245; /* #F5F5F5 */
+    --destructive: 239 68 68;   /* #EF4444 */
+    --destructive-foreground: 245 245 245; /* #F5F5F5 */
+    --border: 42 47 58;       /* #2A2F3A */
+    --input: 42 47 58;        /* #2A2F3A */
+    --ring: 124 58 237;         /* #7C3AED */
   }
 }
 
 @layer base {
   * {
-    @apply border-border; /* Will use the new Cobalt Blue border */
+    /* Use the new borders-lines color variable */
+    @apply border-borders-lines;
   }
 
   body {
-    @apply bg-background text-foreground font-inter; /* Will use Black bg, White text */
+    /* Apply background and text colors using the new variables via Tailwind's theme extension */
+    @apply bg-light-background text-light-text-primary dark:bg-dark-background dark:text-dark-text-primary font-inter;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-satoshi text-foreground; /* Ensure headings also use the primary foreground color */
+    @apply font-satoshi text-light-text-primary dark:text-dark-text-primary;
   }
 }
 
@@ -109,88 +110,67 @@
     font-family: 'Inter', sans-serif;
   }
 
-  /* Updated gradients to use new dt variables */
-  .bg-gradient-dark {
-    background: linear-gradient(135deg, var(--dt-dark) 0%, var(--dt-primary) 100%); /* Black to Dark Blue */
-  }
-
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-secondary) 100%); /* Dark Blue to Cobalt Blue */
-  }
-
-  .bg-gradient-hero {
-    /* Adjusting hero gradient based on new theme. Example: Black to Dark Blue to Cobalt */
-    background: linear-gradient(135deg, var(--dt-dark) 0%, var(--dt-primary) 50%, var(--dt-secondary) 100%);
-  }
-
-  .text-dt-primary {
-    color: var(--dt-primary); /* Dark Blue */
-  }
-
-  .text-dt-secondary {
-    color: var(--dt-secondary); /* Cobalt Blue */
-  }
-
-  .text-dt-accent { /* Added for Egyptian Blue text */
-    color: var(--dt-accent); /* Egyptian Blue */
-  }
-
-  .text-dt-gray-light {
-    color: var(--dt-gray-light); /* Light Gray */
-  }
-
-  .text-dt-white { /* Added for explicit white text */
-    color: var(--dt-white);
-  }
-
+  /* Updated Glass Card for dual theme */
   .glass-card {
-    /* Glassmorphism with new theme: Dark blue translucent background with cobalt border */
-    @apply bg-dt-primary/10 backdrop-blur-md border border-dt-secondary/20;
+    @apply bg-color-glass-layer-bg backdrop-blur-md border border-color-borders-lines/30;
+    /* Light mode specific shadow if needed, can be done with utilities too */
+    @apply shadow-card-light dark:shadow-none;
   }
-  
-  /* .dark .glass-card is no longer strictly necessary if .dark is the default and identical,
-     but can be kept for specificity or slight variations if desired.
-     Assuming it should match the main theme for now. */
-  .dark .glass-card {
-    @apply bg-dt-primary/20 backdrop-blur-md border border-dt-secondary/10; /* Slightly more opaque primary for dark variant */
+  /* Ensure backdrop-filter works if not enabled by default in Tailwind config */
+  /* In tailwind.config.js, ensure 'backdropBlur' is extended if you use classes like backdrop-blur-md */
+
+
+  /* Button Styles - Mobile First */
+  .btn { /* Base button style, can be extended */
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply sm:px-6 sm:py-3; /* Larger padding on sm+ screens */
   }
 
   .btn-primary {
-    /* Primary button: Dark Blue background, white text, Cobalt Blue hover */
-    @apply bg-dt-primary hover:bg-dt-secondary text-dt-white font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg;
-    /* Gradient can be kept or simplified to solid color based on preference */
-    background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-secondary) 100%);
+    @apply btn bg-light-accent-primary text-white hover:bg-light-accent-hover dark:bg-dark-accent-primary dark:hover:bg-dark-accent-hover;
+    /* Apply gradient using Tailwind's bg-gradient utility with defined gradient names */
+    @apply bg-accent-gradient-light dark:bg-accent-gradient-dark;
+    @apply focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary;
   }
 
   .btn-secondary {
-    /* Secondary button: Transparent with Cobalt Blue border and text, hover to Dark Blue bg with white text */
-    @apply bg-transparent border-2 border-dt-secondary text-dt-secondary hover:bg-dt-primary hover:text-dt-white font-medium px-6 py-3 rounded-xl transition-all duration-200;
+    @apply btn bg-transparent border-2 border-light-accent-primary text-light-accent-primary hover:bg-light-accent-primary hover:text-white;
+    @apply dark:border-dark-accent-primary dark:text-dark-accent-primary dark:hover:bg-dark-accent-primary dark:hover:text-dark-text-primary;
+    @apply focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary;
   }
-
+  
+  /* Example of a Track Card - Mobile First */
   .track-card {
-    /* Track card using glass-card style, with adjusted hover to be subtle with new dark theme */
-    @apply glass-card p-4 rounded-2xl hover:bg-dt-primary/30 dark:hover:bg-dt-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer;
+    @apply bg-light-card-surface dark:bg-dark-card-surface rounded-xl p-4; /* Base padding */
+    @apply border border-light-borders-lines dark:border-dark-borders-lines;
+    @apply shadow-card-light dark:shadow-none; /* Apply light mode shadow */
+    @apply transition-all duration-300 hover:scale-[1.02];
+    /* On larger screens, you might increase padding or change layout */
+    @apply sm:p-6;
+  }
+
+  /* Custom scrollbar - Themed */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-light-accent-primary/50 dark:bg-dark-accent-primary/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-light-accent-hover dark:bg-dark-accent-hover;
   }
 }
 
-/* Custom scrollbar - themed with new colors */
-::-webkit-scrollbar {
-  width: 8px;
-}
+/* Remove old DecentraTune specific component styles if they are not aligned with the new theme */
+/* For example, .bg-gradient-dark, .bg-gradient-primary, .text-dt-primary etc. from the old theme should be refactored or removed. */
 
-::-webkit-scrollbar-track {
-  @apply bg-transparent; /* Keep track transparent */
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-dt-secondary/50 rounded-full; /* Cobalt Blue thumb, semi-transparent */
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-dt-accent; /* Egyptian Blue on hover */
-}
-
-/* Audio visualizer animation */
+/* Audio visualizer animation (can be kept if still used) */
 @keyframes wave {
   0%, 100% { height: 4px; }
   50% { height: 20px; }

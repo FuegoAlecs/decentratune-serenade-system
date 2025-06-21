@@ -58,32 +58,72 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				// DecentraTune Brand Colors
-				dt: {
-					// New Dark Blue Theme
-					'primary': '#0A192F', // Dark Blue (Primary)
-					'primary-dark': '#0A192F', // Dark Blue (Primary) - assuming same for dark variant for now
-					'secondary': '#0047AB', // Cobalt Blue (Secondary Accent)
-					'accent': '#1034A6', // Egyptian Blue (Accent)
-					'dark': '#000000', // Black
-					'dark-secondary': '#000000', // Black
-					'black': '#000000', // Black
-					'white': '#FFFFFF', // White
-					// Grays can be derived from black and white or kept minimal
-					'gray-dark': '#1F2937', // Darker Gray, can adjust if needed
-					'gray-medium': '#4B5563', // Medium Gray, can adjust
-					'gray-light': '#D1D5DB', // Light Gray, can adjust
-					// Status colors - keep existing or adjust to fit new theme if necessary
-					success: '#10B981',
-					warning: '#F59E0B',
-					error: '#EF4444',
-				}
+				// New Dual Theme Color Palette
+				// Light Mode Colors (defaults, also used for :root CSS vars)
+				'light-background': '#F9FAFB',
+				'light-card-surface': '#FFFFFF',
+				'light-text-primary': '#111827',
+				'light-text-secondary': '#6B7280',
+				'light-accent-primary': '#7C3AED',
+				'light-accent-hover': '#6D28D9',
+				'light-borders-lines': '#E5E7EB',
+				'light-success': '#16A34A',
+				'light-error': '#DC2626',
+
+				// Dark Mode Colors (used for .dark CSS vars and Tailwind dark: utilities)
+				'dark-background': '#0B0C10',
+				'dark-card-surface': '#1C1E26',
+				'dark-text-primary': '#F5F5F5',
+				'dark-text-secondary': '#9CA3AF',
+				'dark-accent-primary': '#7C3AED', // Same as light for primary accent
+				'dark-accent-hover': '#9F67FF',
+				'dark-borders-lines': '#2A2F3A',
+				'dark-success': '#22C55E',
+				'dark-error': '#EF4444',
+
+				// Generic names for easier usage with CSS variables approach (optional if only using TW classes)
+				// These will be overridden by .dark variants
+				background: 'var(--color-background)',
+				'card-surface': 'var(--color-card-surface)',
+				'text-primary': 'var(--color-text-primary)',
+				'text-secondary': 'var(--color-text-secondary)',
+				'accent-primary': 'var(--color-accent-primary)',
+				'accent-hover': 'var(--color-accent-hover)',
+				'borders-lines': 'var(--color-borders-lines)',
+				success: 'var(--color-success)',
+				error: 'var(--color-error)',
+
+				// Original dt colors can be removed or kept if still needed for specific old components
+				// For now, we'll comment them out to prioritize the new theme.
+				// dt: {
+				// 	primary: '#3B82F6',
+				// 	'primary-dark': '#1D4ED8',
+				// 	secondary: '#60A5FA',
+				// 	dark: '#0F172A',
+				// 	'dark-secondary': '#1E293B',
+				// 	black: '#000000',
+				// 	'gray-dark': '#111827',
+				// 	'gray-medium': '#374151',
+				// 	'gray-light': '#6B7280',
+				// 	accent: '#8B5CF6',
+				// 	success: '#10B981',
+				// 	warning: '#F59E0B',
+				// 	error: '#EF4444',
+				// }
 			},
 			backgroundImage: {
-				'gradient-primary': 'linear-gradient(135deg, #0A192F 0%, #0047AB 100%)', // Dark Blue to Cobalt Blue
-				'gradient-dark': 'linear-gradient(135deg, #000000 0%, #0A192F 100%)', // Black to Dark Blue
-				'gradient-card': 'linear-gradient(135deg, rgba(10, 25, 47, 0.1) 0%, rgba(0, 0, 0, 0.1) 100%)', // Adjusted for new theme
-				'gradient-hero': 'linear-gradient(135deg, #000000 0%, #0A192F 50%, #0047AB 100%)', // Black to Dark Blue to Cobalt
+				// New Accent Gradients
+				'accent-gradient-light': 'linear-gradient(90deg, #7C3AED, #9333EA)',
+				'accent-gradient-dark': 'linear-gradient(90deg, #7C3AED, #6366F1)',
+				// Old gradients - comment out or remove
+				// 'gradient-primary': 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+				// 'gradient-dark': 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+				// 'gradient-card': 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.1) 100%)',
+				// 'gradient-hero': 'linear-gradient(135deg, #000000 0%, #0F172A 50%, #1E293B 100%)',
 			},
+			boxShadow: {
+        'card-light': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.05)', // Example for soft elevation
+      },
 			backdropBlur: {
 				xs: '2px',
 			},
