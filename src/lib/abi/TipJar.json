@@ -1,0 +1,40 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "artist",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "TipReceived",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address payable",
+        "name": "artist",
+        "type": "address"
+      }
+    ],
+    "name": "tip",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]
