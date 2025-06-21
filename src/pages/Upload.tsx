@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
 // import { parseEther } from "ethers";
-// import { NFTStorage, File as NFTStorageFile } from "nft.storage"; // Handled by uploadTrack
 import { useMintTrack } from "@/hooks/contracts";
-import { uploadTrack, type ERC721MetadataArgs } from "@/lib/ipfs"; // Import the new IPFS utility
+import { uploadTrack, type ERC721MetadataArgs } from "@/lib/ipfs";
+import { decodeEventLog } from 'viem'; // For parsing event logs
+import musicNftAbi from "@/lib/abi/MusicNFT.json"; // ABI needed for decoding event
 
 const genres = ["Electronic", "Hip Hop", "Rock", "Jazz", "Classical", "Ambient", "Pop", "R&B", "Country", "Folk"];
 
@@ -32,12 +34,12 @@ export default function Upload() {
   const {
     mintTrack,
     mintHash,
-    isMintPending, // This is wagmi's isPending for writeContract (waiting for wallet)
+    isMintPending,
     mintError,
-    // mintStatus, // Can be used for more granular UI updates
-    isConfirming, // This is from useWaitForTransactionReceipt (tx mining)
+    isConfirming,
     isConfirmed,
-    confirmationError
+    confirmationError,
+    receipt, // Add receipt to get logs from useMintTrack (needs to be returned by the hook)
   } = useMintTrack();
 
 
@@ -46,11 +48,12 @@ export default function Upload() {
     description: "",
     genre: "",
     // price: "", // ETH - Removed as per new requirements for useMintTrack
-    // royalties: "10", // Removed
-    // totalSupply: "100", // Removed, assuming ERC721 single collection
+    royalties: "10", // Added back for metadata, default to 10%
+    // totalSupply: "100", // Still removed
     bpm: "",
     key: "",
     tags: "",
+    external_url: "", // Added for optional external link
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -60,16 +63,34 @@ export default function Upload() {
     }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'cover') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (type === 'audio') {
-        setAudioFile(file);
-      } else {
-        setCoverFile(file);
-      }
+  // react-dropzone handlers
+  const onDropAudio = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setAudioFile(acceptedFiles[0]);
+      // TODO: Add toast for successful file selection or specific error (e.g. wrong type)
     }
-  };
+  }, []);
+
+  const onDropCover = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setCoverFile(acceptedFiles[0]);
+      // TODO: Add toast
+    }
+  }, []);
+
+  const { getRootProps: getAudioRootProps, getInputProps: getAudioInputProps, isDragActive: isAudioDragActive } = useDropzone({
+    onDrop: onDropAudio,
+    accept: { 'audio/mpeg': ['.mp3'], 'audio/flac': ['.flac'], 'audio/wav': ['.wav'] }, // Added wav
+    multiple: false,
+  });
+
+  const { getRootProps: getCoverRootProps, getInputProps: getCoverInputProps, isDragActive: isCoverDragActive } = useDropzone({
+    onDrop: onDropCover,
+    accept: { 'image/jpeg': [], 'image/png': [], 'image/webp': [], 'image/gif': [] },
+    multiple: false,
+  });
+  // End react-dropzone handlers
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,18 +120,19 @@ export default function Upload() {
         { trait_type: "BPM", value: formData.bpm || "N/A" },
         { trait_type: "Key", value: formData.key || "N/A" },
         { trait_type: "Tags", value: formData.tags || "N/A" },
-        // Creator address is good to have, but not strictly part of ERC721 base.
-        // Can be added to properties or as a custom attribute if desired by indexers.
+        { trait_type: "Royalties", value: `${formData.royalties}%` }, // Add royalties to attributes
         // { trait_type: "Creator", value: address! },
       ],
       properties: { // Custom properties block
         bpm: formData.bpm,
         key: formData.key,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        creator_address: address, // Adding creator here
+        creator_address: address,
+        // Storing royalties here as well for easier structured access if needed
+        royalties_percentage: parseFloat(formData.royalties) || 0,
       }
     };
-    if (formData.external_url) { // Optional field
+    if (formData.external_url) {
         metadataToUpload.external_url = formData.external_url;
     }
 
@@ -149,15 +171,45 @@ export default function Upload() {
 
   // Handle transaction confirmation and error states from useMintTrack hook
   useEffect(() => {
-    if (isConfirmed) {
-      toast({
-        title: "Track Minted Successfully!",
-        description: `${formData.title} is now available as an NFT. Transaction: ${mintHash}`,
-      });
-      // Reset form fields or navigate away
-      navigate('/profile');
-    }
-    if (mintError || confirmationError) {
+    if (isConfirmed && receipt) {
+      let newTrackId: string | null = null;
+      // Try to find the TrackMinted event and extract tokenId
+      for (const log of receipt.logs) {
+        try {
+          const decodedEvent = decodeEventLog({
+            abi: musicNftAbi, // The ABI of the contract that emits the event
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decodedEvent.eventName === 'TrackMinted') {
+            // Assuming your event is TrackMinted(uint256 tokenId, address artist, string uri)
+            // The actual structure of args depends on your event definition.
+            // For viem, args is an object or array. If it's an object:
+            newTrackId = (decodedEvent.args as any)?.tokenId?.toString();
+            // If it's an array: newTrackId = (decodedEvent.args as any[])?.[0]?.toString();
+            break;
+          }
+        } catch (e) {
+          // Not the event we're looking for, or decoding failed for this log
+          // console.debug("Could not decode an event or not the TrackMinted event:", e);
+        }
+      }
+
+      if (newTrackId) {
+        toast.success(
+          `${formData.title} minted successfully! Token ID: ${newTrackId}. Tx: ${mintHash}`,
+          { duration: 7000 }
+        );
+        navigate(`/track/${newTrackId}`);
+      } else {
+        // Fallback if event parsing fails or tokenId not found
+        toast.success(
+          `${formData.title} minted successfully! Tx: ${mintHash}. Could not determine new Token ID from events.`,
+          { duration: 7000 }
+        );
+        navigate('/profile'); // Fallback to profile
+      }
+    } else if (mintError || confirmationError) { // Handle errors only if not confirmed
       toast({
         title: "Transaction Failed",
         description: (mintError?.message || confirmationError?.message) ?? "An error occurred during minting.",
@@ -169,94 +221,82 @@ export default function Upload() {
   const isProcessing = uploadStage !== 'idle' && uploadStage !== 'done' || isMintPending || isConfirming;
 
   return (
-    <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8 sm:mb-12">
-          <h1 className="font-satoshi font-bold text-3xl sm:text-4xl mb-3 sm:mb-4">Upload Your Track</h1>
-          <p className="text-dt-gray-light text-base sm:text-lg">
+    // Overall page container with mobile-first padding
+    <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto"> {/* Slightly reduced max-width for better focus on content */}
+        <div className="text-center mb-6 sm:mb-10"> {/* Adjusted margin */}
+          <h1 className="font-satoshi font-bold text-2xl sm:text-3xl lg:text-4xl mb-2 sm:mb-3">Upload Your Track</h1> {/* Responsive text */}
+          <p className="text-dt-gray-light text-sm sm:text-base"> {/* Responsive text */}
             Share your music with the world and mint it as an NFT
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* File Uploads */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+        {/* Form uses flex-col and gap for mobile-first stacking of sections */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 md:gap-8">
+          {/* File Uploads Section - Stacks vertically on mobile, then 2 cols on md+ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Audio Upload */}
-            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
-              <Label className="block text-base sm:text-lg font-semibold mb-3 sm:mb-4"> {/* Adjusted Text Size & Margin */}
-                <Music className="inline h-5 w-5 mr-2" />
-                Audio File
+            <div className="glass-card p-4 rounded-xl flex flex-col gap-3">
+              <Label className="block text-base font-semibold">
+                <Music className="inline h-5 w-5 mr-2 align-middle" /> Audio File (MP3, FLAC, WAV)
               </Label>
-              
-              <div className="border-2 border-dashed border-white/20 rounded-xl p-6 sm:p-8 text-center hover:border-dt-primary transition-colors"> {/* Adjusted Padding */}
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => handleFileUpload(e, 'audio')}
-                  className="hidden"
-                  id="audio-upload"
-                />
-                <label htmlFor="audio-upload" className="cursor-pointer">
-                  <UploadIcon className="h-12 w-12 text-dt-gray-light mx-auto mb-4" />
-                  {audioFile ? (
-                    <div>
-                      <p className="text-white font-medium">{audioFile.name}</p>
-                      <p className="text-dt-gray-light text-sm">Click to change</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-white font-medium">Click to upload audio</p>
-                      <p className="text-dt-gray-light text-sm">MP3, WAV, FLAC up to 50MB</p>
-                    </div>
-                  )}
-                </label>
+              <div {...getAudioRootProps()} className={`border-2 border-dashed border-white/20 rounded-xl p-4 py-8 sm:p-6 text-center cursor-pointer hover:border-dt-primary transition-colors flex flex-col justify-center items-center min-h-[160px] ${isAudioDragActive ? 'border-dt-primary bg-dt-primary/10' : ''}`}>
+                <input {...getAudioInputProps()} />
+                <UploadIcon className="h-10 w-10 sm:h-12 sm:w-12 text-dt-gray-light mx-auto mb-3" />
+                {audioFile ? (
+                  <div>
+                    <p className="text-white font-medium text-sm sm:text-base">{audioFile.name}</p>
+                    <p className="text-dt-gray-light text-xs sm:text-sm">({(audioFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    <p className="text-dt-accent text-xs mt-1">Click or drag to change</p>
+                  </div>
+                ) : isAudioDragActive ? (
+                  <p className="text-dt-primary font-semibold text-sm sm:text-base">Drop the audio file here...</p>
+                ) : (
+                  <div>
+                    <p className="text-white font-medium text-sm sm:text-base">Drag 'n' drop audio file, or click</p>
+                    <p className="text-dt-gray-light text-xs sm:text-sm">Max 50MB</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Cover Art Upload */}
-            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
-              <Label className="block text-base sm:text-lg font-semibold mb-3 sm:mb-4"> {/* Adjusted Text Size & Margin */}
-                <Image className="inline h-5 w-5 mr-2" />
-                Cover Art
+            <div className="glass-card p-4 rounded-xl flex flex-col gap-3">
+              <Label className="block text-base font-semibold">
+                <Image className="inline h-5 w-5 mr-2 align-middle" /> Cover Art (JPG, PNG, GIF)
               </Label>
-              
-              <div className="border-2 border-dashed border-white/20 rounded-xl p-6 sm:p-8 text-center hover:border-dt-primary transition-colors"> {/* Adjusted Padding */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, 'cover')}
-                  className="hidden"
-                  id="cover-upload"
-                />
-                <label htmlFor="cover-upload" className="cursor-pointer">
-                  {coverFile ? (
-                    <div>
-                      <img
-                        src={URL.createObjectURL(coverFile)}
-                        alt="Cover preview"
-                        className="w-24 h-24 object-cover rounded-lg mx-auto mb-4"
-                      />
-                      <p className="text-white font-medium">{coverFile.name}</p>
-                      <p className="text-dt-gray-light text-sm">Click to change</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <UploadIcon className="h-12 w-12 text-dt-gray-light mx-auto mb-4" />
-                      <p className="text-white font-medium">Click to upload cover</p>
-                      <p className="text-dt-gray-light text-sm">JPG, PNG up to 10MB</p>
-                    </div>
-                  )}
-                </label>
+              <div {...getCoverRootProps()} className={`border-2 border-dashed border-white/20 rounded-xl p-4 py-8 sm:p-6 text-center cursor-pointer hover:border-dt-primary transition-colors flex flex-col justify-center items-center min-h-[160px] ${isCoverDragActive ? 'border-dt-primary bg-dt-primary/10' : ''}`}>
+                <input {...getCoverInputProps()} />
+                {coverFile ? (
+                  <div className="flex flex-col items-center text-center">
+                    <img
+                      src={URL.createObjectURL(coverFile)}
+                      alt="Cover preview"
+                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg mx-auto mb-2"
+                    />
+                    <p className="text-white font-medium text-sm sm:text-base">{coverFile.name}</p>
+                    <p className="text-dt-gray-light text-xs sm:text-sm">({(coverFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                     <p className="text-dt-accent text-xs mt-1">Click or drag to change</p>
+                  </div>
+                ) : isCoverDragActive ? (
+                  <p className="text-dt-primary font-semibold text-sm sm:text-base">Drop the cover art here...</p>
+                ) : (
+                  <div>
+                    <UploadIcon className="h-10 w-10 sm:h-12 sm:w-12 text-dt-gray-light mx-auto mb-3" />
+                    <p className="text-white font-medium text-sm sm:text-base">Drag 'n' drop cover art, or click</p>
+                    <p className="text-dt-gray-light text-xs sm:text-sm">Max 10MB</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Track Information */}
-          <div className="glass-card p-4 py-6 sm:p-8 rounded-2xl"> {/* Adjusted Padding */}
-            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">Track Information</h2> {/* Adjusted Text Size & Margin */}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"> {/* Adjusted Gap */}
-              <div>
+          {/* Track Information Section */}
+          <div className="glass-card p-4 sm:p-6 rounded-xl flex flex-col gap-4"> {/* Consistent padding and gap */}
+            <h2 className="font-satoshi font-bold text-lg sm:text-xl">Track Information</h2>
+            {/* Fields now stack vertically by default due to flex-col on parent, then grid on md+ */}
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4">
+              <div className="flex flex-col gap-1.5"> {/* Group label and input */}
                 <Label htmlFor="title">Track Title *</Label>
                 <Input
                   id="title"
@@ -268,15 +308,14 @@ export default function Upload() {
                   required
                 />
               </div>
-
-              <div>
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="genre">Genre *</Label>
                 <select
                   id="genre"
                   name="genre"
                   value={formData.genre}
                   onChange={handleInputChange}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white mt-2"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white" // Removed mt-2, using parent gap
                   required
                 >
                   <option value="">Select genre</option>
@@ -287,8 +326,7 @@ export default function Upload() {
                   ))}
                 </select>
               </div>
-
-              <div>
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="bpm">BPM</Label>
                 <Input
                   id="bpm"
@@ -297,11 +335,10 @@ export default function Upload() {
                   value={formData.bpm}
                   onChange={handleInputChange}
                   placeholder="120"
-                  className="bg-white/10 border-white/20 text-white mt-2"
+                  className="bg-white/10 border-white/20 text-white"
                 />
               </div>
-
-              <div>
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="key">Key</Label>
                 <Input
                   id="key"
@@ -309,12 +346,12 @@ export default function Upload() {
                   value={formData.key}
                   onChange={handleInputChange}
                   placeholder="C Major"
-                  className="bg-white/10 border-white/20 text-white mt-2"
+                  className="bg-white/10 border-white/20 text-white"
                 />
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="flex flex-col gap-1.5"> {/* Group label and textarea */}
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
@@ -322,12 +359,12 @@ export default function Upload() {
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Tell the story behind your track..."
-                className="bg-white/10 border-white/20 text-white mt-2"
+                className="bg-white/10 border-white/20 text-white"
                 rows={4}
               />
             </div>
 
-            <div className="mt-6">
+            <div className="flex flex-col gap-1.5"> {/* Group label and input */}
               <Label htmlFor="tags">Tags (comma separated)</Label>
               <Input
                 id="tags"
@@ -335,14 +372,45 @@ export default function Upload() {
                 value={formData.tags}
                 onChange={handleInputChange}
                 placeholder="ambient, electronic, chill"
-                className="bg-white/10 border-white/20 text-white mt-2"
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5"> {/* Group label and input */}
+              <Label htmlFor="external_url">External URL (Optional)</Label>
+              <Input
+                id="external_url"
+                name="external_url"
+                type="url"
+                value={formData.external_url}
+                onChange={handleInputChange}
+                placeholder="https://yoursite.com/track-info"
+                className="bg-white/10 border-white/20 text-white"
               />
             </div>
           </div>
 
-          {/* NFT Settings - Removed Price, Total Supply, Royalties as per new requirements */}
-          {/* <div className="glass-card p-4 py-6 sm:p-8 rounded-2xl">
-            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">NFT Settings</h2>
+          {/* NFT Settings Section */}
+          <div className="glass-card p-4 sm:p-6 rounded-xl flex flex-col gap-4"> {/* Consistent padding and gap */}
+            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">NFT Configuration</h2>
+            <div className="flex flex-col gap-1.5"> {/* Group label and input */}
+              <Label htmlFor="royalties">Royalties (%)</Label>
+              <Input
+                id="royalties"
+                name="royalties"
+                type="number"
+                min="0"
+                max="50" // Example max, adjust as needed
+                step="0.1"
+                value={formData.royalties}
+                onChange={handleInputChange}
+                placeholder="10"
+                className="bg-white/10 border-white/20 text-white mt-2"
+                required
+              />
+              <p className="text-xs text-dt-gray-light mt-1">
+                Default royalty percentage for secondary sales (for metadata purposes).
+              </p>
+            </div>
             <div className="mt-6 p-4 bg-dt-primary/10 rounded-xl border border-dt-primary/20">
               <h3 className="font-semibold text-dt-primary mb-2">Gas Fee Estimate</h3>
               <p className="text-dt-gray-light text-sm">

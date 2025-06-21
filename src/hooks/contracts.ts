@@ -38,9 +38,10 @@ export function useMintTrack() {
     } = useWriteContract();
 
     const {
+        data: receipt, // expose receipt
         isLoading: isConfirming,
         isSuccess: isConfirmed,
-        error: confirmationError
+        error: confirmationError,
     } = useWaitForTransactionReceipt({ hash });
 
     const mintTrack = async (cid: string) => {
@@ -70,9 +71,10 @@ export function useMintTrack() {
         isMintPending, // True when waiting for user to confirm in wallet
         mintError,
         mintStatus, // 'idle' | 'pending' (waiting for wallet) | 'success' (tx sent) | 'error'
-        isConfirming, // True when transaction is mining
-        isConfirmed, // True when transaction is confirmed
+        isConfirming,
+        isConfirmed,
         confirmationError,
+        receipt, // return receipt
     };
 }
 
