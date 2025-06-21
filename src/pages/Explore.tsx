@@ -147,17 +147,18 @@ export default function Explore() {
               placeholder="Search tracks, artists..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/10 border-white/20 text-white focus:ring-2 focus:ring-dt-primary transition-all duration-200"
+              className="pl-10 bg-light-card-surface/80 dark:bg-dark-card-surface/80 border-light-borders-lines dark:border-dark-borders-lines text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-ring ring-offset-light-background dark:ring-offset-dark-background transition-all duration-200"
             />
           </div>
           
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
-            className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white hover:bg-white/20 transition-colors duration-200 focus:ring-2 focus:ring-dt-primary"
+            className="bg-light-card-surface dark:bg-dark-card-surface border border-light-borders-lines dark:border-dark-borders-lines rounded-lg px-4 py-2 text-light-text-primary dark:text-dark-text-primary hover:bg-light-card-surface/80 dark:hover:bg-dark-card-surface/80 transition-colors duration-200 focus:ring-2 focus:ring-ring ring-offset-light-background dark:ring-offset-dark-background"
           >
             {genres.map(genre => (
-              <option key={genre} value={genre} className="bg-dt-dark text-white">
+              // Options need themed background as well for consistency in dropdown
+              <option key={genre} value={genre} className="bg-light-card-surface dark:bg-dark-card-surface text-light-text-primary dark:text-dark-text-primary">
                 {genre}
               </option>
             ))}
@@ -166,10 +167,11 @@ export default function Explore() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white hover:bg-white/20 transition-colors duration-200 focus:ring-2 focus:ring-dt-primary"
+            className="bg-light-card-surface dark:bg-dark-card-surface border border-light-borders-lines dark:border-dark-borders-lines rounded-lg px-4 py-2 text-light-text-primary dark:text-dark-text-primary hover:bg-light-card-surface/80 dark:hover:bg-dark-card-surface/80 transition-colors duration-200 focus:ring-2 focus:ring-ring ring-offset-light-background dark:ring-offset-dark-background"
           >
             {sortOptions.map(option => (
-              <option key={option} value={option} className="bg-dt-dark text-white">
+              // Options need themed background
+              <option key={option} value={option} className="bg-light-card-surface dark:bg-dark-card-surface text-light-text-primary dark:text-dark-text-primary">
                 {option}
               </option>
             ))}

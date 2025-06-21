@@ -26,19 +26,21 @@ const Index = () => {
                   <input
                     type="text"
                     placeholder="Search tracks, artists, or NFTs..."
-                    className="bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-2 text-white placeholder-dt-gray-light focus:outline-none focus:ring-2 focus:ring-dt-primary w-80"
+                    // Updated to use new theme colors, focus ring, and responsive width
+                    className="bg-light-card-surface/80 dark:bg-dark-card-surface/80 border border-light-borders-lines dark:border-dark-borders-lines rounded-xl pl-10 pr-4 py-2 text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary focus:outline-none focus:ring-2 focus:ring-ring ring-offset-light-background dark:ring-offset-dark-background w-full sm:w-64 md:w-80 transition-all duration-200"
                   />
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" className="text-white hover:text-dt-primary">
+              <div className="flex items-center space-x-2 sm:space-x-4"> {/* Responsive spacing */}
+                <Button variant="ghost" size="icon" className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary"> {/* Icon size and themed colors */}
                   <Bell className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="sm" className="text-white hover:text-dt-primary">
+                <Button variant="ghost" size="icon" className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary"> {/* Icon size and themed colors */}
                   <User className="h-5 w-5" />
                 </Button>
-                <Button className="btn-primary">
+                {/* This button already uses .btn-primary which is themed in index.css */}
+                <Button className="btn-primary text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"> {/* Responsive padding and text */}
                   Connect Wallet
                 </Button>
               </div>
