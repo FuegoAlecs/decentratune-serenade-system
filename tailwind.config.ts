@@ -59,26 +59,30 @@ export default {
 				},
 				// DecentraTune Brand Colors
 				dt: {
-					primary: '#3B82F6',
-					'primary-dark': '#1D4ED8',
-					secondary: '#60A5FA',
-					dark: '#0F172A',
-					'dark-secondary': '#1E293B',
-					black: '#000000',
-					'gray-dark': '#111827',
-					'gray-medium': '#374151',
-					'gray-light': '#6B7280',
-					accent: '#8B5CF6',
+					// New Dark Blue Theme
+					'primary': '#0A192F', // Dark Blue (Primary)
+					'primary-dark': '#0A192F', // Dark Blue (Primary) - assuming same for dark variant for now
+					'secondary': '#0047AB', // Cobalt Blue (Secondary Accent)
+					'accent': '#1034A6', // Egyptian Blue (Accent)
+					'dark': '#000000', // Black
+					'dark-secondary': '#000000', // Black
+					'black': '#000000', // Black
+					'white': '#FFFFFF', // White
+					// Grays can be derived from black and white or kept minimal
+					'gray-dark': '#1F2937', // Darker Gray, can adjust if needed
+					'gray-medium': '#4B5563', // Medium Gray, can adjust
+					'gray-light': '#D1D5DB', // Light Gray, can adjust
+					// Status colors - keep existing or adjust to fit new theme if necessary
 					success: '#10B981',
 					warning: '#F59E0B',
 					error: '#EF4444',
 				}
 			},
 			backgroundImage: {
-				'gradient-primary': 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-				'gradient-dark': 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-				'gradient-card': 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.1) 100%)',
-				'gradient-hero': 'linear-gradient(135deg, #000000 0%, #0F172A 50%, #1E293B 100%)',
+				'gradient-primary': 'linear-gradient(135deg, #0A192F 0%, #0047AB 100%)', // Dark Blue to Cobalt Blue
+				'gradient-dark': 'linear-gradient(135deg, #000000 0%, #0A192F 100%)', // Black to Dark Blue
+				'gradient-card': 'linear-gradient(135deg, rgba(10, 25, 47, 0.1) 0%, rgba(0, 0, 0, 0.1) 100%)', // Adjusted for new theme
+				'gradient-hero': 'linear-gradient(135deg, #000000 0%, #0A192F 50%, #0047AB 100%)', // Black to Dark Blue to Cobalt
 			},
 			backdropBlur: {
 				xs: '2px',

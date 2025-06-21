@@ -9,87 +9,94 @@
 
 @layer base {
   :root {
-    --background: 255 255 255;
-    --foreground: 15 23 42;
-    --card: 255 255 255;
-    --card-foreground: 15 23 42;
-    --popover: 255 255 255;
-    --popover-foreground: 15 23 42;
-    --primary: 59 130 246;
-    --primary-foreground: 255 255 255;
-    --secondary: 241 245 249;
-    --secondary-foreground: 15 23 42;
-    --muted: 241 245 249;
-    --muted-foreground: 100 116 139;
-    --accent: 241 245 249;
-    --accent-foreground: 15 23 42;
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 59 130 246;
+    /* Dark Blue Theme */
+    --background: 0 0 0; /* Black */
+    --foreground: 255 255 255; /* White */
+    --card: 10 25 47; /* Dark Blue (Primary) */
+    --card-foreground: 255 255 255; /* White */
+    --popover: 10 25 47; /* Dark Blue (Primary) */
+    --popover-foreground: 255 255 255; /* White */
+    --primary: 10 25 47; /* Dark Blue (Primary) */
+    --primary-foreground: 255 255 255; /* White */
+    --secondary: 0 71 171; /* Cobalt Blue (Secondary Accent) */
+    --secondary-foreground: 255 255 255; /* White */
+    --muted: 0 0 0; /* Black */
+    --muted-foreground: 209 213 219; /* Light Gray for muted text on black bg */
+    --accent: 16 52 166; /* Egyptian Blue (Accent) */
+    --accent-foreground: 255 255 255; /* White */
+    --destructive: 239 68 68; /* Existing Red */
+    --destructive-foreground: 255 255 255; /* White */
+    --border: 0 71 171; /* Cobalt Blue for borders */
+    --input: 10 25 47; /* Dark Blue for input backgrounds */
+    --ring: 16 52 166; /* Egyptian Blue for rings */
     --radius: 0.75rem;
-    --sidebar-background: 255 255 255;
-    --sidebar-foreground: 15 23 42;
-    --sidebar-primary: 59 130 246;
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 241 245 249;
-    --sidebar-accent-foreground: 15 23 42;
-    --sidebar-border: 226 232 240;
-    --sidebar-ring: 59 130 246;
 
-    /* Custom DecentraTune Variables */
-    --dt-primary: #6366f1;
-    --dt-primary-dark: #4f46e5;
-    --dt-secondary: #8b5cf6;
-    --dt-accent: #f59e0b;
-    --dt-gray-light: #94a3b8;
-    --dt-dark: #0f1419;
+    /* Sidebar specific vars - using the new theme */
+    --sidebar-background: 0 0 0; /* Black */
+    --sidebar-foreground: 255 255 255; /* White */
+    --sidebar-primary: 10 25 47; /* Dark Blue */
+    --sidebar-primary-foreground: 255 255 255; /* White */
+    --sidebar-accent: 16 52 166; /* Egyptian Blue */
+    --sidebar-accent-foreground: 255 255 255; /* White */
+    --sidebar-border: 0 71 171; /* Cobalt Blue */
+    --sidebar-ring: 16 52 166; /* Egyptian Blue */
+
+    /* Custom DecentraTune Variables (Updated with new theme) */
+    --dt-primary: #0A192F; /* Dark Blue (Primary) */
+    --dt-primary-dark: #0A192F; /* Dark Blue (Primary) */
+    --dt-secondary: #0047AB; /* Cobalt Blue (Secondary Accent) */
+    --dt-accent: #1034A6; /* Egyptian Blue (Accent) */
+    --dt-gray-light: #D1D5DB; /* Light Gray */
+    --dt-dark: #000000; /* Black */
+    --dt-white: #FFFFFF; /* White */
   }
 
+  /* The .dark class will now be the default, so we can remove its specific overrides if they are identical to :root,
+     or adjust if we want a slightly different dark variant (though the request is for a singular dark theme) */
   .dark {
-    --background: 0 0 0;
-    --foreground: 255 255 255;
-    --card: 15 23 42;
-    --card-foreground: 255 255 255;
-    --popover: 15 23 42;
-    --popover-foreground: 255 255 255;
-    --primary: 59 130 246;
-    --primary-foreground: 255 255 255;
-    --secondary: 30 41 59;
-    --secondary-foreground: 255 255 255;
-    --muted: 30 41 59;
-    --muted-foreground: 148 163 184;
-    --accent: 30 41 59;
-    --accent-foreground: 255 255 255;
-    --destructive: 239 68 68;
-    --destructive-foreground: 255 255 255;
-    --border: 30 41 59;
-    --input: 30 41 59;
-    --ring: 59 130 246;
-    --sidebar-background: 0 0 0;
-    --sidebar-foreground: 255 255 255;
-    --sidebar-primary: 59 130 246;
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 15 23 42;
-    --sidebar-accent-foreground: 255 255 255;
-    --sidebar-border: 30 41 59;
-    --sidebar-ring: 59 130 246;
+    --background: 0 0 0; /* Black */
+    --foreground: 255 255 255; /* White */
+    --card: 10 25 47; /* Dark Blue (Primary) */
+    --card-foreground: 255 255 255; /* White */
+    --popover: 10 25 47; /* Dark Blue (Primary) */
+    --popover-foreground: 255 255 255; /* White */
+    --primary: 10 25 47; /* Dark Blue (Primary) */
+    --primary-foreground: 255 255 255; /* White */
+    --secondary: 0 71 171; /* Cobalt Blue (Secondary Accent) */
+    --secondary-foreground: 255 255 255; /* White */
+    --muted: 0 0 0; /* Black */
+    --muted-foreground: 209 213 219; /* Light Gray for muted text on black bg */
+    --accent: 16 52 166; /* Egyptian Blue (Accent) */
+    --accent-foreground: 255 255 255; /* White */
+    --destructive: 239 68 68; /* Existing Red */
+    --destructive-foreground: 255 255 255; /* White */
+    --border: 0 71 171; /* Cobalt Blue for borders */
+    --input: 10 25 47; /* Dark Blue for input backgrounds */
+    --ring: 16 52 166; /* Egyptian Blue for rings */
+
+    --sidebar-background: 0 0 0; /* Black */
+    --sidebar-foreground: 255 255 255; /* White */
+    --sidebar-primary: 10 25 47; /* Dark Blue */
+    --sidebar-primary-foreground: 255 255 255; /* White */
+    --sidebar-accent: 16 52 166; /* Egyptian Blue */
+    --sidebar-accent-foreground: 255 255 255; /* White */
+    --sidebar-border: 0 71 171; /* Cobalt Blue */
+    --sidebar-ring: 16 52 166; /* Egyptian Blue */
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Will use the new Cobalt Blue border */
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-background text-foreground font-inter; /* Will use Black bg, White text */
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-satoshi;
+    @apply font-satoshi text-foreground; /* Ensure headings also use the primary foreground color */
   }
 }
 
@@ -102,67 +109,85 @@
     font-family: 'Inter', sans-serif;
   }
 
+  /* Updated gradients to use new dt variables */
   .bg-gradient-dark {
-    background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%);
+    background: linear-gradient(135deg, var(--dt-dark) 0%, var(--dt-primary) 100%); /* Black to Dark Blue */
   }
 
   .bg-gradient-primary {
-    background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-secondary) 100%);
+    background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-secondary) 100%); /* Dark Blue to Cobalt Blue */
   }
 
   .bg-gradient-hero {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    /* Adjusting hero gradient based on new theme. Example: Black to Dark Blue to Cobalt */
+    background: linear-gradient(135deg, var(--dt-dark) 0%, var(--dt-primary) 50%, var(--dt-secondary) 100%);
   }
 
   .text-dt-primary {
-    color: var(--dt-primary);
+    color: var(--dt-primary); /* Dark Blue */
   }
 
   .text-dt-secondary {
-    color: var(--dt-secondary);
+    color: var(--dt-secondary); /* Cobalt Blue */
+  }
+
+  .text-dt-accent { /* Added for Egyptian Blue text */
+    color: var(--dt-accent); /* Egyptian Blue */
   }
 
   .text-dt-gray-light {
-    color: var(--dt-gray-light);
+    color: var(--dt-gray-light); /* Light Gray */
+  }
+
+  .text-dt-white { /* Added for explicit white text */
+    color: var(--dt-white);
   }
 
   .glass-card {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
+    /* Glassmorphism with new theme: Dark blue translucent background with cobalt border */
+    @apply bg-dt-primary/10 backdrop-blur-md border border-dt-secondary/20;
   }
   
+  /* .dark .glass-card is no longer strictly necessary if .dark is the default and identical,
+     but can be kept for specificity or slight variations if desired.
+     Assuming it should match the main theme for now. */
   .dark .glass-card {
-    @apply bg-black/20 backdrop-blur-md border border-white/10;
+    @apply bg-dt-primary/20 backdrop-blur-md border border-dt-secondary/10; /* Slightly more opaque primary for dark variant */
   }
 
   .btn-primary {
-    @apply bg-dt-primary hover:bg-dt-primary-dark text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg;
+    /* Primary button: Dark Blue background, white text, Cobalt Blue hover */
+    @apply bg-dt-primary hover:bg-dt-secondary text-dt-white font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg;
+    /* Gradient can be kept or simplified to solid color based on preference */
     background: linear-gradient(135deg, var(--dt-primary) 0%, var(--dt-secondary) 100%);
   }
 
   .btn-secondary {
-    @apply bg-transparent border-2 border-dt-primary text-dt-primary hover:bg-dt-primary hover:text-white font-medium px-6 py-3 rounded-xl transition-all duration-200;
+    /* Secondary button: Transparent with Cobalt Blue border and text, hover to Dark Blue bg with white text */
+    @apply bg-transparent border-2 border-dt-secondary text-dt-secondary hover:bg-dt-primary hover:text-dt-white font-medium px-6 py-3 rounded-xl transition-all duration-200;
   }
 
   .track-card {
-    @apply glass-card p-4 rounded-2xl hover:bg-white/20 dark:hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer;
+    /* Track card using glass-card style, with adjusted hover to be subtle with new dark theme */
+    @apply glass-card p-4 rounded-2xl hover:bg-dt-primary/30 dark:hover:bg-dt-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer;
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - themed with new colors */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  @apply bg-transparent; /* Keep track transparent */
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-dt-primary/50 rounded-full;
+  @apply bg-dt-secondary/50 rounded-full; /* Cobalt Blue thumb, semi-transparent */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-dt-primary;
+  @apply bg-dt-accent; /* Egyptian Blue on hover */
 }
 
 /* Audio visualizer animation */

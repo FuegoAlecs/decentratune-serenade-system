@@ -1,10 +1,18 @@
+/* Remove or update styles in App.css as most of it will be handled by Tailwind or global styles in index.css */
+
+/* Ensure #root takes full viewport width and height if it's the main app container */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* max-width: 1280px; /* This might be project-specific, review if it should be full-width */
+  /* margin: 0 auto; /* Centering if max-width is set */
+  /* padding: 2rem; /* Tailwind utilities like p-4 or p-8 can handle this per-page/component */
+  /* text-align: center; /* Usually handled by specific components */
+  min-height: 100vh; /* Ensure app container takes at least full viewport height */
+  display: flex; /* Helpful for centering content or managing layout */
+  flex-direction: column; /* Standard for app layout */
 }
 
+/* Logo styles can be component-specific or removed if not globally styled here.
+   If kept, update colors to match the new theme.
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -12,12 +20,14 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em var(--dt-accent)); /* Example: Use Egyptian Blue for hover effect */
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em var(--dt-secondary)); /* Example: Use Cobalt Blue for React logo hover */
 }
+*/
 
+/* Keyframes like logo-spin are fine if used. */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -27,16 +37,32 @@
   }
 }
 
+/*
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
 }
+*/
 
+/* .card styling should ideally be handled by Tailwind's card component styles or utility classes.
+   If this is a very generic .card, ensure it aligns with the new theme.
 .card {
-  padding: 2em;
+  padding: 2em; /* Consider using Tailwind padding utilities */
+  /* background-color: hsl(var(--card)); /* Use CSS var for card background */
+  /* color: hsl(var(--card-foreground)); /* Use CSS var for card text color */
+  /* border-radius: var(--radius); */
 }
+*/
 
+/* .read-the-docs color should align with the new theme's text colors, e.g., muted foreground.
 .read-the-docs {
-  color: #888;
+  color: hsl(var(--muted-foreground)); /* Use muted foreground color */
 }
+*/
+
+/* General recommendation: Minimize App.css and rely on Tailwind utility classes
+   and global styles defined in src/index.css for theming and layout.
+   This file should ideally be for very specific global overrides or root-level layout
+   that cannot be easily achieved with Tailwind in main.tsx or App.tsx.
+*/
