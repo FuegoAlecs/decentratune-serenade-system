@@ -13,6 +13,8 @@ import TrackDetails from "./pages/TrackDetails";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import ArtistsPlaceholder from "./pages/Artists"; // Import new Artists page
+import WalletPlaceholder from "./pages/Wallet"; // Import new Wallet page
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/track/:id" element={<TrackDetails />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/artists" element={<ArtistsPlaceholder />} /> {/* Add Artists route */}
+              <Route path="/wallet" element={<WalletPlaceholder />} /> {/* Add Wallet route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <PersistentAudioPlayer />

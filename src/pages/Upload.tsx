@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Upload as UploadIcon, Music, Image, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { useNavigate } from "react-router-dom"; // Import for redirection
 
 const genres = ["Electronic", "Hip Hop", "Rock", "Jazz", "Classical", "Ambient", "Pop", "R&B", "Country", "Folk"];
 
@@ -12,6 +14,8 @@ export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const { toast } = useToast(); // Initialize useToast
+  const navigate = useNavigate(); // Initialize useNavigate
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -44,12 +48,40 @@ export default function Upload() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!audioFile || !coverFile) {
+      toast({ title: "Missing Files", description: "Please upload both audio and cover art files.", variant: "destructive" });
+      return;
+    }
+    // Add other validations as needed (e.g., for required formData fields)
+
     setIsUploading(true);
     
-    // Simulate upload process
+    console.log("Preparing to mint NFT with data:", {
+      formData,
+      audioFileName: audioFile.name,
+      coverArtFileName: coverFile.name,
+    });
+
+    // Simulate upload process (replace with actual IPFS uploads and contract interaction)
+    // 1. Upload audioFile to IPFS -> get audioCID
+    // 2. Upload coverFile to IPFS -> get coverCID
+    // 3. Construct metadata JSON (including name, description, audioCID, coverCID, attributes like genre, bpm, key)
+    // 4. Upload metadata JSON to IPFS -> get metadataCID
+    // 5. Call smart contract's mint function with metadataCID, price, totalSupply, royalties
+
     setTimeout(() => {
       setIsUploading(false);
-      // Handle success - redirect or show success message
+      toast({
+        title: "Track Minted Successfully!",
+        description: `${formData.title} is now available as an NFT.`,
+      });
+      // Artist Flow Step 5: "Shared track appears on Explore" (implicitly by data refresh)
+      // Artist Flow Step 6: "Tracks tips and mint stats on Profile" (implicitly by data refresh)
+
+      // Placeholder: Redirect to new track details page or profile
+      // const newTrackId = "simulated-track-id-" + Date.now(); // Simulate a new track ID
+      // navigate(`/track/${newTrackId}`);
+      navigate('/profile'); // Or redirect to profile to see it under "My Uploads"
     }, 3000);
   };
 

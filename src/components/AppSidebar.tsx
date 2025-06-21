@@ -15,19 +15,19 @@ import {
 
 const menuItems = [
   {
-    title: "Dashboard",
+    title: "Dashboard", // Routes to Index.tsx
     url: "/",
     icon: Home,
   },
   {
-    title: "Discover",
-    url: "/discover",
+    title: "Explore", // Changed from Discover, routes to Explore.tsx
+    url: "/explore",
     icon: TrendingUp,
   },
   {
-    title: "My Music",
-    url: "/library",
-    icon: Music,
+    title: "My Profile", // Changed from My Music, routes to Profile.tsx
+    url: "/profile",
+    icon: Music, // Icon could be User if preferred for profile
   },
   {
     title: "Artists",
@@ -35,7 +35,7 @@ const menuItems = [
     icon: Users,
   },
   {
-    title: "Upload",
+    title: "Upload", // Routes to Upload.tsx
     url: "/upload",
     icon: Upload,
   },
@@ -47,11 +47,11 @@ const bottomItems = [
     url: "/wallet",
     icon: Wallet,
   },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Settings", // Page /settings not implemented yet, keeping commented
+  //   url: "/settings",
+  //   icon: Settings,
+  // },
 ];
 
 export function AppSidebar() {

@@ -26,14 +26,37 @@ const trackData = {
   },
   tips: 142,
   isLiked: false,
+  isOwned: false, // Added for flow demonstration
 };
 
 export default function TrackDetails() {
   const { id } = useParams();
+  // TODO: Replace local isPlaying, progress with useAudio context for actual playback
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState([33]);
   const [isLiked, setIsLiked] = useState(trackData.isLiked);
   const [tipAmount, setTipAmount] = useState("");
+  // Assuming trackData would eventually come from a fetch based on `id` and include real ownership
+  const [currentTrackDetails, setCurrentTrackDetails] = useState(trackData);
+
+  const handleBuyNFT = () => {
+    // Placeholder: Simulate buying NFT
+    console.log(`Attempting to buy NFT for track ID: ${id}, price: ${currentTrackDetails.price}`);
+    alert(`Placeholder: Buy NFT for ${currentTrackDetails.price}`);
+    // After successful purchase, update state or refetch data
+    // setCurrentTrackDetails(prev => ({ ...prev, isOwned: true, remaining: prev.remaining -1 }));
+  };
+
+  const handleTipArtist = () => {
+    // Placeholder: Simulate tipping artist
+    if (!tipAmount || parseFloat(tipAmount) <= 0) {
+      alert("Please enter a valid tip amount.");
+      return;
+    }
+    console.log(`Attempting to tip artist for track ID: ${id}, amount: ${tipAmount} ETH`);
+    alert(`Placeholder: Tip ${tipAmount} ETH to ${currentTrackDetails.artist}`);
+    setTipAmount(""); // Reset tip amount
+  };
 
   return (
     <div className="min-h-screen bg-gradient-dark text-white">
@@ -121,28 +144,41 @@ export default function TrackDetails() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-dt-gray-light">Price</span>
-                  <span className="font-semibold text-dt-primary text-lg">{trackData.price}</span>
+                  <span className="font-semibold text-dt-primary text-lg">{currentTrackDetails.price}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-dt-gray-light">Available</span>
-                  <span>{trackData.remaining} of {trackData.totalSupply}</span>
+                  <span>{currentTrackDetails.remaining} of {currentTrackDetails.totalSupply}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-dt-gray-light">Mint Date</span>
-                  <span>{trackData.mintDate}</span>
+                  <span>{currentTrackDetails.mintDate}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-dt-gray-light">Genre</span>
-                  <span>{trackData.genre}</span>
+                  <span>{currentTrackDetails.genre}</span>
                 </div>
               </div>
 
-              <Button className="w-full btn-primary mt-6 text-base sm:text-lg py-3"> {/* Adjusted Text Size */}
-                Buy NFT for {trackData.price}
-              </Button>
+              {currentTrackDetails.isOwned ? (
+                <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
+                  You own this NFT
+                </Button>
+              ) : currentTrackDetails.remaining > 0 ? (
+                <Button
+                  className="w-full btn-primary mt-6 text-base sm:text-lg py-3"
+                  onClick={handleBuyNFT}
+                >
+                  Buy NFT for {currentTrackDetails.price}
+                </Button>
+              ) : (
+                <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
+                  Sold Out
+                </Button>
+              )}
             </div>
 
             {/* Artist Info */}
@@ -175,7 +211,7 @@ export default function TrackDetails() {
                   onChange={(e) => setTipAmount(e.target.value)}
                   className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
                 />
-                <Button className="btn-primary">
+                <Button className="btn-primary" onClick={handleTipArtist}>
                   <Coins className="h-4 w-4 mr-2" />
                   Tip
                 </Button>
@@ -185,7 +221,7 @@ export default function TrackDetails() {
             {/* Track Description */}
             <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <h2 className="font-satoshi font-bold text-xl mb-4">Description</h2>
-              <p className="text-dt-gray-light leading-relaxed">{trackData.description}</p>
+              <p className="text-dt-gray-light leading-relaxed">{currentTrackDetails.description}</p>
             </div>
 
             {/* Metadata */}
@@ -195,25 +231,25 @@ export default function TrackDetails() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-dt-gray-light text-sm">BPM</span>
-                  <p className="font-semibold">{trackData.metadata.bpm}</p>
+                  <p className="font-semibold">{currentTrackDetails.metadata.bpm}</p>
                 </div>
                 <div>
                   <span className="text-dt-gray-light text-sm">Key</span>
-                  <p className="font-semibold">{trackData.metadata.key}</p>
+                  <p className="font-semibold">{currentTrackDetails.metadata.key}</p>
                 </div>
                 <div>
                   <span className="text-dt-gray-light text-sm">Royalties</span>
-                  <p className="font-semibold">{trackData.metadata.royalties}</p>
+                  <p className="font-semibold">{currentTrackDetails.metadata.royalties}</p>
                 </div>
                 <div>
                   <span className="text-dt-gray-light text-sm">Tips Received</span>
-                  <p className="font-semibold">{trackData.tips}</p>
+                  <p className="font-semibold">{currentTrackDetails.tips}</p>
                 </div>
               </div>
               
               <div className="mt-4 pt-4 border-t border-white/10">
                 <span className="text-dt-gray-light text-sm">Contract Address</span>
-                <p className="font-mono text-sm break-all">{trackData.metadata.contractAddress}</p>
+                <p className="font-mono text-sm break-all">{currentTrackDetails.metadata.contractAddress}</p>
               </div>
             </div>
           </div>
