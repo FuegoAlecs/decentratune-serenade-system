@@ -8,19 +8,21 @@ import { Upload as UploadIcon, Music, Image, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAccount } from "wagmi";
-// import { parseEther } from "ethers"; // Not needed if mintMusic doesn't take price/royalties
-import { NFTStorage, File as NFTStorageFile } from "nft.storage";
-import { useMintTrack } from "@/hooks/contracts"; // Import the custom hook
-
-// import musicNftAbi from "@/lib/abi/MusicNFT.json"; // ABI import handled by the hook
+// import { parseEther } from "ethers";
+// import { NFTStorage, File as NFTStorageFile } from "nft.storage"; // Handled by uploadTrack
+import { useMintTrack } from "@/hooks/contracts";
+import { uploadTrack, type ERC721MetadataArgs } from "@/lib/ipfs"; // Import the new IPFS utility
 
 const genres = ["Electronic", "Hip Hop", "Rock", "Jazz", "Classical", "Ambient", "Pop", "R&B", "Country", "Folk"];
 
-// const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT; // Handled by the hook
-const nftStorageToken = import.meta.env.VITE_WEB_STORAGE_TOKEN;
+// const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT;
+// const nftStorageToken = import.meta.env.VITE_WEB_STORAGE_TOKEN; // Used in ipfs.ts
 
 export default function Upload() {
-  const [isIPFSUploading, setIsIPFSUploading] = useState(false); // Specifically for IPFS part
+  // Combined loading state is now just isProcessing, individual IPFS state not needed here
+  // const [isIPFSUploading, setIsIPFSUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState<'idle' | 'audio' | 'cover' | 'metadata' | 'done'>('idle');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const { toast } = useToast();
@@ -79,74 +81,73 @@ export default function Upload() {
       toast({ title: "Missing Files", description: "Please upload both audio and cover art files.", variant: "destructive" });
       return;
     }
-    if (!nftStorageToken) { // musicNftContractAddress check is now within the hook
-      toast({ title: "Configuration Error", description: "NFT Storage service is not configured.", variant: "destructive" });
-      console.error("Missing VITE_WEB_STORAGE_TOKEN");
-      return;
-    }
-    // Basic validation for required form fields (price, totalSupply, royalties removed)
+    // VITE_WEB_STORAGE_TOKEN check is now inside uploadTrack
+    // Basic validation for required form fields
     if (!formData.title || !formData.genre) {
         toast({ title: "Missing Information", description: "Please fill in Track Title and Genre.", variant: "destructive" });
         return;
     }
 
-    setIsIPFSUploading(true); // Start IPFS upload loading state
+    // Overall processing starts (IPFS + Minting)
+    // setIsIPFSUploading(true) is effectively handled by isProcessing and uploadStage
+
+    const metadataToUpload: ERC721MetadataArgs = {
+      name: formData.title,
+      description: formData.description,
+      attributes: [
+        { trait_type: "Genre", value: formData.genre },
+        { trait_type: "BPM", value: formData.bpm || "N/A" },
+        { trait_type: "Key", value: formData.key || "N/A" },
+        { trait_type: "Tags", value: formData.tags || "N/A" },
+        // Creator address is good to have, but not strictly part of ERC721 base.
+        // Can be added to properties or as a custom attribute if desired by indexers.
+        // { trait_type: "Creator", value: address! },
+      ],
+      properties: { // Custom properties block
+        bpm: formData.bpm,
+        key: formData.key,
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        creator_address: address, // Adding creator here
+      }
+    };
+    if (formData.external_url) { // Optional field
+        metadataToUpload.external_url = formData.external_url;
+    }
+
 
     try {
-      const client = new NFTStorage({ token: nftStorageToken });
-      toast({ title: "Uploading files to IPFS...", description: "This may take a moment." });
+      setUploadStage('audio'); // Initial stage
+      setUploadProgress(0);
 
-      const audioBlob = new Blob([audioFile], { type: audioFile.type });
-      const coverBlob = new Blob([coverFile], { type: coverFile.type });
+      const metadataCid = await uploadTrack({
+        audioFile,
+        coverFile,
+        metadataArgs: metadataToUpload,
+        onProgress: (progress) => {
+          setUploadProgress(progress.percent);
+          setUploadStage(progress.stage);
+          console.log(`Upload Progress: ${progress.percent}% Stage: ${progress.stage}`);
+        },
+      });
 
-      const audioCid = await client.storeBlob(new NFTStorageFile([audioBlob], audioFile.name, { type: audioFile.type }));
-      const coverCid = await client.storeBlob(new NFTStorageFile([coverBlob], coverFile.name, { type: coverFile.type }));
+      // IPFS upload finished (stage will be 'done')
+      toast({ title: "IPFS Upload Complete!", description: "Please confirm transaction in your wallet to mint." });
 
-      toast({ title: "Files uploaded!", description: "Preparing metadata..." });
-
-      const metadata = {
-        name: formData.title,
-        description: formData.description,
-        image: `ipfs://${coverCid}`,
-        audio: `ipfs://${audioCid}`,
-        external_url: "",
-        attributes: [
-          { trait_type: "Genre", value: formData.genre },
-          { trait_type: "BPM", value: formData.bpm || "N/A" },
-          { trait_type: "Key", value: formData.key || "N/A" },
-          { trait_type: "Tags", value: formData.tags || "N/A" },
-          { trait_type: "Creator", value: address },
-        ],
-        properties: {
-            bpm: formData.bpm,
-            key: formData.key,
-            tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-            creator_address: address,
-        }
-      };
-
-      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-      const metadataCid = await client.storeBlob(new NFTStorageFile([metadataBlob], 'metadata.json', { type: 'application/json' }));
-      const metadataUri = `ipfs://${metadataCid}`;
-
-      setIsIPFSUploading(false); // IPFS upload finished
-      toast({ title: "Metadata prepared!", description: "Please confirm transaction in your wallet." });
-
-      // Call the mintTrack function from the hook
-      await mintTrack(metadataUri);
+      await mintTrack(metadataCid); // Pass the metadata CID (which is ipfs://<metadata_cid_hash>)
 
     } catch (error) {
-      console.error("Error during IPFS upload or metadata preparation:", error);
+      console.error("Error during IPFS upload or minting process:", error);
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred during IPFS upload.",
+        title: "Process Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive",
       });
-      setIsIPFSUploading(false);
+      setUploadStage('idle');
+      setUploadProgress(0);
     }
   };
 
-  // Handle transaction submission, confirmation, and error states from useMintTrack hook
+  // Handle transaction confirmation and error states from useMintTrack hook
   useEffect(() => {
     if (isConfirmed) {
       toast({
@@ -165,7 +166,7 @@ export default function Upload() {
     }
   }, [isConfirmed, mintError, confirmationError, mintHash, formData.title, navigate, toast]);
 
-  const isProcessing = isIPFSUploading || isMintPending || isConfirming;
+  const isProcessing = uploadStage !== 'idle' && uploadStage !== 'done' || isMintPending || isConfirming;
 
   return (
     <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6">
@@ -179,7 +180,7 @@ export default function Upload() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* File Uploads */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8"> {/* Adjusted Gap */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {/* Audio Upload */}
             <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <Label className="block text-base sm:text-lg font-semibold mb-3 sm:mb-4"> {/* Adjusted Text Size & Margin */}
@@ -354,11 +355,13 @@ export default function Upload() {
           <div className="text-center">
             <Button
               type="submit"
-              disabled={isProcessing || !audioFile || !coverFile} // Use combined isProcessing
+              disabled={isProcessing || !audioFile || !coverFile}
               className="btn-primary text-base sm:text-lg px-8 py-3 sm:px-10 sm:py-3.5"
             >
-              {isIPFSUploading ? (
-                <> <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Uploading to IPFS... </>
+              {uploadStage !== 'idle' && uploadStage !== 'done' && uploadStage !== 'metadata' ? (
+                <> <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Uploading {uploadStage}... ({uploadProgress.toFixed(0)}%) </>
+              ) : uploadStage === 'metadata' ? (
+                <> <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Finalizing IPFS... </>
               ) : isMintPending ? (
                 <> <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Waiting for Wallet... </>
               ) : isConfirming ? (
@@ -369,9 +372,22 @@ export default function Upload() {
             </Button>
             
             {isProcessing && (
-              <p className="text-dt-gray-light text-sm mt-4">
-                This may take a few minutes. Please don't close this page.
-              </p>
+              <div className="mt-4 text-sm text-dt-gray-light">
+                <p>
+                  {uploadStage !== 'idle' && uploadStage !== 'done' && `Current stage: Uploading ${uploadStage}...`}
+                  {isMintPending && 'Waiting for wallet confirmation...'}
+                  {isConfirming && 'Minting transaction is processing...'}
+                </p>
+                {uploadStage !== 'idle' && uploadStage !== 'done' && (
+                  <div className="w-full bg-white/10 rounded-full h-2.5 mt-2">
+                    <div
+                      className="bg-dt-primary h-2.5 rounded-full transition-all duration-300 ease-linear"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+                 <p className="mt-1">This may take a few minutes. Please don't close this page.</p>
+              </div>
             )}
           </div>
         </form>
