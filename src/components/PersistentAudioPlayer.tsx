@@ -73,8 +73,8 @@ export function PersistentAudioPlayer() {
             </Button>
           </div>
 
-          {/* Player Controls - Central element, always visible. md:flex-1 to allow growth, but capped by max-w-md */}
-          <div className="flex flex-col items-center space-y-1 md:space-y-2 md:flex-1 md:max-w-md">
+          {/* Player Controls - Central element, always visible. flex-1 allows growth, min-w-0 allows shrinking. md:max-w-md caps it on larger screens. */}
+          <div className="flex flex-col items-center space-y-1 md:space-y-2 flex-1 min-w-0 md:max-w-md">
             <div className="flex items-center space-x-1 md:space-x-2"> {/* Reduced spacing for mobile controls */}
               {/* SkipBack: hidden on mobile, visible sm+ */}
               <Button 
