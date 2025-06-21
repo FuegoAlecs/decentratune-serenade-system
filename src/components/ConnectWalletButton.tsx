@@ -43,8 +43,7 @@ export function ConnectWalletButton() {
     }
   }, [isConnected, status, activeConnector]);
 
-  const handleConnect = (connector: any) // wagmi's Connector type
-   => {
+  const handleConnect = (connector: any) => { // wagmi's Connector type
     connect({ connector });
   };
 
