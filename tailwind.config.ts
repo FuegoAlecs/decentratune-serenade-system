@@ -93,13 +93,14 @@ export default {
 				success: 'var(--color-success)',
 				error: 'var(--color-error)',
 
-				// DecentraTune specific colors defined via CSS variables
-        'dt-primary': 'var(--dt-primary)',
-        'dt-primary-dark': 'var(--dt-primary-dark)',
-        'dt-secondary': 'var(--dt-secondary)',
-        'dt-accent': 'var(--dt-accent)',
-        'dt-gray-light': 'var(--dt-gray-light)',
-        'dt-dark': 'var(--dt-dark)',
+				// DecentraTune specific colors defined with direct hex values
+        // to allow Tailwind to correctly handle opacity modifiers (e.g., /50)
+        'dt-primary': '#6366f1',
+        'dt-primary-dark': '#4f46e5',
+        'dt-secondary': '#8b5cf6',
+        'dt-accent': '#f59e0b',
+        'dt-gray-light': '#94a3b8',
+        'dt-dark': '#0f1419',
 
 				// Original dt colors can be removed or kept if still needed for specific old components
 				// For now, we'll comment them out to prioritize the new theme.
