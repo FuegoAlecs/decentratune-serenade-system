@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 
 const featuredTracks = [
   {
+    id: "featured-1",
     title: "Cosmic Drift",
     artist: "NebulaBeats",
     duration: "3:42",
@@ -12,6 +13,7 @@ const featuredTracks = [
     isNFT: true,
   },
   {
+    id: "featured-2",
     title: "Digital Soul",
     artist: "CryptoHarmony",
     duration: "4:18",
@@ -19,6 +21,7 @@ const featuredTracks = [
     isNFT: false,
   },
   {
+    id: "featured-3",
     title: "Ethereal Dreams",
     artist: "QuantumBeats",
     duration: "5:23",
@@ -26,6 +29,7 @@ const featuredTracks = [
     isNFT: true,
   },
   {
+    id: "featured-4",
     title: "Neon Nights",
     artist: "SynthWave",
     duration: "3:55",
