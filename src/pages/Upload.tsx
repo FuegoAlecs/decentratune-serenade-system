@@ -390,10 +390,10 @@ export default function Upload() {
           </div>
 
           {/* NFT Settings Section */}
-          <div className="glass-card p-4 sm:p-6 rounded-xl flex flex-col gap-4"> {/* Consistent padding and gap */}
-            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">NFT Configuration</h2>
-            <div className="flex flex-col gap-1.5"> {/* Group label and input */}
-              <Label htmlFor="royalties">Royalties (%)</Label>
+          <div className="glass-card p-4 sm:p-6 rounded-xl flex flex-col gap-4">
+            <h2 className="font-satoshi font-bold text-lg sm:text-xl">NFT Configuration</h2> {/* Adjusted heading size for consistency */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="royalties">Royalties (%) *</Label>
               <Input
                 id="royalties"
                 name="royalties"
@@ -404,20 +404,24 @@ export default function Upload() {
                 value={formData.royalties}
                 onChange={handleInputChange}
                 placeholder="10"
-                className="bg-white/10 border-white/20 text-white mt-2"
+                className="bg-white/10 border-white/20 text-white" // Removed mt-2
                 required
               />
-              <p className="text-xs text-dt-gray-light mt-1">
-                Default royalty percentage for secondary sales (for metadata purposes).
+              <p className="text-xs text-dt-gray-light">
+                Royalty percentage for secondary sales (for metadata purposes).
               </p>
             </div>
-            <div className="mt-6 p-4 bg-dt-primary/10 rounded-xl border border-dt-primary/20">
-              <h3 className="font-semibold text-dt-primary mb-2">Gas Fee Estimate</h3>
-              <p className="text-dt-gray-light text-sm">
-                Estimated gas fee for minting: <span className="text-white font-medium">~0.02 ETH</span>
+            {/* Gas fee estimate can be a static display or fetched if complex */}
+            {/* For now, keeping it simple or it can be removed if not essential for this phase */}
+            {/*
+            <div className="mt-4 p-3 bg-dt-primary/10 rounded-lg border border-dt-primary/20">
+              <h3 className="font-semibold text-dt-primary text-sm mb-1">Gas Fee Estimate</h3>
+              <p className="text-dt-gray-light text-xs">
+                Minting gas can vary. Current estimate: <span className="text-white font-medium">~0.02 ETH</span>
               </p>
             </div>
-          </div> */}
+            */}
+          </div>
 
           {/* Submit Button */}
           <div className="text-center">
