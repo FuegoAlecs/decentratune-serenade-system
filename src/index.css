@@ -110,12 +110,13 @@
     font-family: 'Inter', sans-serif;
   }
 
-  /* Updated Glass Card for dual theme */
   .glass-card {
-    @apply bg-color-glass-layer-bg backdrop-blur-md border border-color-borders-lines/30;
-    /* Light mode specific shadow if needed, can be done with utilities too */
-    @apply shadow-card-light dark:shadow-none;
+    background-color: var(--color-glass-layer-bg);
+    border-color: var(--color-borders-lines);
+    border-width: 1px; /* Default border width */
+    @apply backdrop-blur-md shadow-card-light dark:shadow-none rounded-lg;
   }
+
   /* Ensure backdrop-filter works if not enabled by default in Tailwind config */
   /* In tailwind.config.js, ensure 'backdropBlur' is extended if you use classes like backdrop-blur-md */
 
