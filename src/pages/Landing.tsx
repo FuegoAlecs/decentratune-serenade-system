@@ -191,8 +191,8 @@ export default function Landing() {
       {/* CTA Section */}
       <section className="py-16 px-6 bg-gradient-primary/10">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-satoshi font-bold text-4xl mb-4">Ready to Own Your Music?</h2>
-          <p className="text-xl text-dt-gray-light mb-8">
+          <h2 className="font-satoshi font-bold text-3xl sm:text-4xl mb-4">Ready to Own Your Music?</h2>
+          <p className="text-lg sm:text-xl text-dt-gray-light mb-8">
             Connect your wallet and start collecting exclusive tracks from independent artists worldwide.
           </p>
           <WalletConnection />

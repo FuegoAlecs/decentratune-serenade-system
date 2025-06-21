@@ -88,21 +88,21 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-dark text-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-dt-primary/20 to-dt-secondary/20 border-b border-white/10">
-        <div className="max-w-6xl mx-auto p-8">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:p-8"> {/* Adjusted Padding */}
           <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
             {/* Avatar */}
             <img
               src={profileData.avatar}
               alt="Profile"
-              className="w-32 h-32 rounded-full object-cover border-4 border-white/20"
+              className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white/20" /* Adjusted Size */
             />
             
             {/* Profile Info */}
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
-                <h1 className="font-satoshi font-bold text-3xl">{profileData.ensName}</h1>
+                <h1 className="font-satoshi font-bold text-2xl sm:text-3xl">{profileData.ensName}</h1> {/* Adjusted Size */}
                 {profileData.isArtist && (
-                  <span className="bg-dt-primary text-white px-3 py-1 rounded-full text-sm">
+                  <span className="bg-dt-primary text-white px-3 py-1 rounded-full text-xs sm:text-sm"> {/* Adjusted Artist Tag Size */}
                     Artist
                   </span>
                 )}
@@ -110,7 +110,7 @@ export default function Profile() {
               
               <div className="flex items-center justify-center md:justify-start space-x-2 mb-4">
                 <Wallet className="h-4 w-4 text-dt-gray-light" />
-                <span className="text-dt-gray-light font-mono">{profileData.walletAddress}</span>
+                <span className="text-dt-gray-light font-mono text-sm sm:text-base">{profileData.walletAddress}</span> {/* Adjusted Wallet Address Size */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -122,39 +122,39 @@ export default function Profile() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"> {/* Adjusted Gap */}
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-dt-primary">{profileData.stats.ownedTracks}</div>
-                  <div className="text-dt-gray-light text-sm">Owned Tracks</div>
+                  <div className="text-xl sm:text-2xl font-bold text-dt-primary">{profileData.stats.ownedTracks}</div> {/* Adjusted Size */}
+                  <div className="text-dt-gray-light text-xs sm:text-sm">Owned Tracks</div> {/* Adjusted Size */}
                 </div>
                 {profileData.isArtist && (
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-dt-primary">{profileData.stats.uploadedTracks}</div>
-                    <div className="text-dt-gray-light text-sm">Uploaded</div>
+                    <div className="text-xl sm:text-2xl font-bold text-dt-primary">{profileData.stats.uploadedTracks}</div> {/* Adjusted Size */}
+                    <div className="text-dt-gray-light text-xs sm:text-sm">Uploaded</div> {/* Adjusted Size */}
                   </div>
                 )}
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-dt-primary">{profileData.stats.totalTips}</div>
-                  <div className="text-dt-gray-light text-sm">Tips Received</div>
+                  <div className="text-xl sm:text-2xl font-bold text-dt-primary">{profileData.stats.totalTips}</div> {/* Adjusted Size */}
+                  <div className="text-dt-gray-light text-xs sm:text-sm">Tips Received</div> {/* Adjusted Size */}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-dt-primary">{profileData.stats.tipsSent}</div>
-                  <div className="text-dt-gray-light text-sm">Tips Sent</div>
+                  <div className="text-xl sm:text-2xl font-bold text-dt-primary">{profileData.stats.tipsSent}</div> {/* Adjusted Size */}
+                  <div className="text-dt-gray-light text-xs sm:text-sm">Tips Sent</div> {/* Adjusted Size */}
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col space-y-3">
+            <div className="flex flex-col space-y-3 w-full md:w-auto"> {/* Added w-full md:w-auto */}
               {profileData.isArtist && (
-                <Link to="/upload">
-                  <Button className="btn-primary">
+                <Link to="/upload" className="w-full md:w-auto"> {/* Added w-full md:w-auto */}
+                  <Button className="btn-primary w-full"> {/* Added w-full */}
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Track
                   </Button>
                 </Link>
               )}
-              <Button variant="outline" className="btn-secondary">
+              <Button variant="outline" className="btn-secondary w-full"> {/* Added w-full */}
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View on Etherscan
               </Button>
@@ -164,9 +164,9 @@ export default function Profile() {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:p-6"> {/* Adjusted Padding */}
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-6 md:mb-8"> {/* Adjusted Margin */}
           <Button
             variant={activeTab === "owned" ? "default" : "ghost"}
             onClick={() => setActiveTab("owned")}
@@ -221,29 +221,31 @@ export default function Profile() {
         {activeTab === "uploaded" && profileData.isArtist && (
           <div className="space-y-6">
             {uploadedTracks.map((track) => (
-              <div key={track.id} className="glass-card p-6 rounded-2xl">
-                <div className="flex items-center space-x-6">
+              <div key={track.id} className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
+                {/* Mobile: flex-col, centered. sm+: flex-row, align-start */}
+                <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:space-x-4">
                   <img
                     src={track.image}
                     alt={track.title}
-                    className="w-20 h-20 object-cover rounded-xl"
+                    className="w-full max-w-[150px] sm:w-20 h-auto sm:h-20 aspect-square sm:aspect-auto object-cover rounded-xl mb-4 sm:mb-0" /* Responsive Image */
                   />
                   
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <h3 className="font-satoshi font-semibold text-lg mb-1">{track.title}</h3>
                     <p className="text-dt-gray-light text-sm mb-3">Minted: {track.mintDate}</p>
                     
-                    <div className="grid grid-cols-3 gap-4">
+                    {/* Mobile: 2 cols. sm+: 3 cols */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 text-xs sm:text-sm mb-4 sm:mb-0">
                       <div>
-                        <span className="text-dt-gray-light text-sm">Sales</span>
+                        <span className="text-dt-gray-light">Sales</span>
                         <p className="font-semibold">{track.sales}/{track.totalSupply}</p>
                       </div>
                       <div>
-                        <span className="text-dt-gray-light text-sm">Revenue</span>
+                        <span className="text-dt-gray-light">Revenue</span>
                         <p className="font-semibold text-dt-primary">{track.revenue}</p>
                       </div>
-                      <div>
-                        <span className="text-dt-gray-light text-sm">Status</span>
+                      <div className="col-span-2 sm:col-span-1"> {/* Status takes full width on mobile if only 2 stats shown, else normal */}
+                        <span className="text-dt-gray-light">Status</span>
                         <p className="font-semibold">
                           {track.sales === track.totalSupply ? "Sold Out" : "Available"}
                         </p>
@@ -251,8 +253,9 @@ export default function Profile() {
                     </div>
                   </div>
                   
-                  <Link to={`/track/${track.id}`}>
-                    <Button variant="outline" size="sm">
+                  {/* Button: Aligned to start on mobile (due to flex-col text-center), auto margin pushes to right on sm+ */}
+                  <Link to={`/track/${track.id}`} className="w-full sm:w-auto sm:ml-auto mt-4 sm:mt-0">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto"> {/* Full width on mobile */}
                       View Details
                     </Button>
                   </Link>

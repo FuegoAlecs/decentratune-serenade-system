@@ -56,9 +56,10 @@ export function TrackCard({
 
   return (
     <div 
-      // Using the .track-card class defined in index.css for base styling (bg, border, shadow, padding)
+      // Using the .track-card class defined in index.css for base styling (bg, border, shadow)
       // group class enables group-hover utilities for child elements
-      className="track-card group relative"
+      // Added responsive padding here instead of in index.css's .track-card
+      className="track-card group relative p-3 sm:p-4"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

@@ -87,7 +87,7 @@ export default function Explore() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-dark text-white p-6">
+      <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6"> {/* Adjusted Padding */}
         <div className="max-w-7xl mx-auto">
           <div className="h-8 bg-gray-600 rounded w-64 mb-8 animate-pulse"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -101,12 +101,12 @@ export default function Explore() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark text-white p-6">
+    <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6"> {/* Adjusted Padding */}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 md:mb-8"> {/* Adjusted margin */}
           <div>
-            <h1 className="font-satoshi font-bold text-4xl mb-2">Explore Music NFTs</h1>
+            <h1 className="font-satoshi font-bold text-3xl sm:text-4xl mb-2">Explore Music NFTs</h1> {/* Adjusted Text Size */}
             <p className="text-dt-gray-light">Discover and collect exclusive tracks from independent artists</p>
           </div>
           
@@ -115,7 +115,7 @@ export default function Explore() {
               variant="ghost"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden"
+              className="lg:hidden" /* Filter button shown only on <lg screens */
             >
               <Filter className="h-4 w-4" />
             </Button>
@@ -139,7 +139,10 @@ export default function Explore() {
         </div>
 
         {/* Filters and Search */}
-        <div className={`flex flex-col lg:flex-row gap-4 mb-8 transition-all duration-300 ${showFilters || window.innerWidth >= 1024 ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden lg:opacity-100 lg:max-h-20'}`}>
+        {/* Base: hidden (opacity-0, max-h-0). If showFilters: visible with max-h. On lg+: always visible with constrained height. */}
+        <div className={`flex flex-col lg:flex-row gap-4 mb-6 md:mb-8 transition-all duration-300 ease-in-out overflow-hidden \
+                         ${showFilters ? 'opacity-100 max-h-[500px]' : 'opacity-0 max-h-0'} \
+                         lg:opacity-100 lg:max-h-20 lg:overflow-visible`}>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-dt-gray-light" />
             <Input

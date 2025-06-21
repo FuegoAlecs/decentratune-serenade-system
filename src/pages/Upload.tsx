@@ -54,27 +54,27 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-dark text-white p-6">
+    <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6"> {/* Adjusted Page Padding */}
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="font-satoshi font-bold text-4xl mb-4">Upload Your Track</h1>
-          <p className="text-dt-gray-light text-lg">
+        <div className="text-center mb-8 sm:mb-12"> {/* Adjusted Margin */}
+          <h1 className="font-satoshi font-bold text-3xl sm:text-4xl mb-3 sm:mb-4">Upload Your Track</h1> {/* Adjusted Text Size & Margin */}
+          <p className="text-dt-gray-light text-base sm:text-lg"> {/* Adjusted Text Size */}
             Share your music with the world and mint it as an NFT
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* File Uploads */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8"> {/* Adjusted Gap */}
             {/* Audio Upload */}
-            <div className="glass-card p-6 rounded-2xl">
-              <Label className="block text-lg font-semibold mb-4">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
+              <Label className="block text-base sm:text-lg font-semibold mb-3 sm:mb-4"> {/* Adjusted Text Size & Margin */}
                 <Music className="inline h-5 w-5 mr-2" />
                 Audio File
               </Label>
               
-              <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-dt-primary transition-colors">
+              <div className="border-2 border-dashed border-white/20 rounded-xl p-6 sm:p-8 text-center hover:border-dt-primary transition-colors"> {/* Adjusted Padding */}
                 <input
                   type="file"
                   accept="audio/*"
@@ -100,13 +100,13 @@ export default function Upload() {
             </div>
 
             {/* Cover Art Upload */}
-            <div className="glass-card p-6 rounded-2xl">
-              <Label className="block text-lg font-semibold mb-4">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
+              <Label className="block text-base sm:text-lg font-semibold mb-3 sm:mb-4"> {/* Adjusted Text Size & Margin */}
                 <Image className="inline h-5 w-5 mr-2" />
                 Cover Art
               </Label>
               
-              <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-dt-primary transition-colors">
+              <div className="border-2 border-dashed border-white/20 rounded-xl p-6 sm:p-8 text-center hover:border-dt-primary transition-colors"> {/* Adjusted Padding */}
                 <input
                   type="file"
                   accept="image/*"
@@ -138,10 +138,10 @@ export default function Upload() {
           </div>
 
           {/* Track Information */}
-          <div className="glass-card p-8 rounded-2xl">
-            <h2 className="font-satoshi font-bold text-2xl mb-6">Track Information</h2>
+          <div className="glass-card p-4 py-6 sm:p-8 rounded-2xl"> {/* Adjusted Padding */}
+            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">Track Information</h2> {/* Adjusted Text Size & Margin */}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"> {/* Adjusted Gap */}
               <div>
                 <Label htmlFor="title">Track Title *</Label>
                 <Input
@@ -227,10 +227,10 @@ export default function Upload() {
           </div>
 
           {/* NFT Settings */}
-          <div className="glass-card p-8 rounded-2xl">
-            <h2 className="font-satoshi font-bold text-2xl mb-6">NFT Settings</h2>
+          <div className="glass-card p-4 py-6 sm:p-8 rounded-2xl"> {/* Adjusted Padding */}
+            <h2 className="font-satoshi font-bold text-xl sm:text-2xl mb-4 sm:mb-6">NFT Settings</h2> {/* Adjusted Text Size & Margin */}
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"> {/* Adjusted Gap */}
               <div>
                 <Label htmlFor="price">Price (ETH) *</Label>
                 <Input
@@ -290,7 +290,7 @@ export default function Upload() {
             <Button
               type="submit"
               disabled={isUploading || !audioFile || !coverFile}
-              className="btn-primary text-lg px-12 py-4"
+              className="btn-primary text-base sm:text-lg px-8 py-3 sm:px-10 sm:py-3.5" /* Adjusted Text Size & Padding */
             >
               {isUploading ? (
                 <>

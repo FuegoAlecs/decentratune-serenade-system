@@ -60,7 +60,7 @@ export function HeroSection() {
 
         {/* Audio Visualizer uses new accent color */}
         <div className="flex justify-center space-x-1 mt-12">
-          {[...Array(20)].map((_, i) => (
+          {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 12 : 20)].map((_, i) => ( // Responsive number of bars
             <div
               key={i}
               className="wave-bar bg-light-accent-primary dark:bg-dark-accent-primary w-1 rounded-full"

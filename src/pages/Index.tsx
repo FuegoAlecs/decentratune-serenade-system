@@ -17,10 +17,10 @@ const Index = () => {
         
         <main className="flex-1 overflow-auto">
           {/* Header */}
-          <header className="sticky top-0 z-40 bg-black/20 backdrop-blur-xl border-b border-white/10 p-4">
+          <header className="sticky top-0 z-40 bg-black/20 backdrop-blur-xl border-b border-white/10 px-4 py-3 md:px-6 md:py-4"> {/* Adjusted padding */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <SidebarTrigger className="text-white hover:text-dt-primary" />
+              <div className="flex items-center space-x-2 md:space-x-4"> {/* Adjusted spacing for trigger */}
+                <SidebarTrigger className="text-white hover:text-dt-primary lg:hidden" /> {/* Hide trigger on larger screens if sidebar is visible */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-dt-gray-light" />
                   <input
@@ -48,7 +48,7 @@ const Index = () => {
           </header>
 
           {/* Main Content */}
-          <div className="p-6 pb-32">
+          <div className="px-4 py-6 md:px-6 md:py-8 pb-32"> {/* Adjusted padding */}
             <HeroSection />
             <StatsSection />
             <FeaturedSection />

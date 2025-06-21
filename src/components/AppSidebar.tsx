@@ -57,7 +57,7 @@ const bottomItems = [
 export function AppSidebar() {
   return (
     <Sidebar className="border-r border-white/10 bg-gradient-dark">
-      <SidebarHeader className="p-6">
+      <SidebarHeader className="p-4 lg:p-6"> {/* Adjusted padding for mobile-first */}
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
             <Music className="h-6 w-6 text-white" />

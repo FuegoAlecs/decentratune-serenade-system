@@ -41,18 +41,19 @@ const featuredTracks = [
 export function FeaturedSection() {
   return (
     <section className="mb-12">
-      <div className="flex items-center justify-between mb-8">
+      {/* Mobile: Stacked title/subtitle and button. sm+: Row layout */}
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 md:mb-8"> {/* Adjusted layout, gap & margin */}
         <div>
-          <h2 className="font-satoshi font-bold text-3xl text-white mb-2">Featured Tracks</h2>
-          <p className="text-dt-gray-light">Discover the hottest drops from top artists</p>
+          <h2 className="font-satoshi font-bold text-2xl sm:text-3xl text-light-text-primary dark:text-dark-text-primary mb-1 sm:mb-2">Featured Tracks</h2> {/* Themed color, responsive text, adjusted margin */}
+          <p className="text-dt-gray-light text-sm sm:text-base">Discover the hottest drops from top artists</p> {/* Responsive text */}
         </div>
-        <Button variant="ghost" className="text-dt-primary hover:text-dt-primary-dark">
+        <Button variant="ghost" className="text-dt-primary hover:text-dt-primary-dark w-full sm:w-auto text-sm sm:text-base"> {/* Full width on mobile */}
           View All
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"> {/* Adjusted gap */}
         {featuredTracks.map((track, index) => (
           <TrackCard key={index} {...track} />
         ))}

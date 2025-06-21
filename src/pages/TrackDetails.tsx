@@ -38,7 +38,7 @@ export default function TrackDetails() {
   return (
     <div className="min-h-screen bg-gradient-dark text-white">
       {/* Header */}
-      <header className="p-6 border-b border-white/10">
+      <header className="px-4 py-3 md:px-6 md:py-4 border-b border-white/10"> {/* Adjusted Padding */}
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link to="/explore" className="flex items-center text-dt-gray-light hover:text-white transition-colors">
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -62,8 +62,8 @@ export default function TrackDetails() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="max-w-6xl mx-auto px-4 py-6 md:p-6"> {/* Adjusted Padding */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12"> {/* Adjusted Gap */}
           {/* Left Column - Artwork and Player */}
           <div className="space-y-6">
             <div className="relative">
@@ -87,10 +87,10 @@ export default function TrackDetails() {
             </div>
 
             {/* Audio Player */}
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h1 className="font-satoshi font-bold text-2xl mb-1">{trackData.title}</h1>
+                  <h1 className="font-satoshi font-bold text-xl sm:text-2xl mb-1">{trackData.title}</h1> {/* Adjusted Text Size */}
                   <p className="text-dt-gray-light">{trackData.artist}</p>
                 </div>
                 <span className="text-dt-gray-light text-sm">{trackData.duration}</span>
@@ -115,7 +115,7 @@ export default function TrackDetails() {
           {/* Right Column - Track Info */}
           <div className="space-y-6">
             {/* NFT Info */}
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <h2 className="font-satoshi font-bold text-xl mb-4">NFT Details</h2>
               
               <div className="space-y-4">
@@ -140,13 +140,13 @@ export default function TrackDetails() {
                 </div>
               </div>
 
-              <Button className="w-full btn-primary mt-6 text-lg py-3">
+              <Button className="w-full btn-primary mt-6 text-base sm:text-lg py-3"> {/* Adjusted Text Size */}
                 Buy NFT for {trackData.price}
               </Button>
             </div>
 
             {/* Artist Info */}
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <h2 className="font-satoshi font-bold text-xl mb-4">Artist</h2>
               
               <div className="flex items-center space-x-4 mb-4">
@@ -183,13 +183,13 @@ export default function TrackDetails() {
             </div>
 
             {/* Track Description */}
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <h2 className="font-satoshi font-bold text-xl mb-4">Description</h2>
               <p className="text-dt-gray-light leading-relaxed">{trackData.description}</p>
             </div>
 
             {/* Metadata */}
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="glass-card p-4 sm:p-6 rounded-2xl"> {/* Adjusted Padding */}
               <h2 className="font-satoshi font-bold text-xl mb-4">Metadata</h2>
               
               <div className="grid grid-cols-2 gap-4">
