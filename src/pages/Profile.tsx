@@ -38,70 +38,8 @@ interface OwnedNftItem extends NftMetadata {
   contractPrice?: string; // Price from contract in ETH
 }
 
-
-// Mock data - will be replaced gradually
-const profileDataMock = { // Renamed to avoid conflict
-  isArtist: true, // This will likely come from a contract or backend
-  stats: {
-    // ownedTracks: 23, // Will be derived from fetched ownedNfts.length
-    uploadedTracks: 8, // Will be fetched
-    totalTips: "12.4 ETH", // Will be fetched
-    tipsSent: "3.2 ETH", // Will be fetched
-  }
-};
-
-// const ownedTracksMock = [ // Mock data, to be replaced by fetchedOwnedNfts
-//   {
-//     id: 1,
-//     title: "Cosmic Drift",
-//     artist: "NebulaBeats",
-//     image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&h=200&fit=crop",
-//     purchaseDate: "2024-03-15",
-//     price: "0.5 ETH",
-//   },
-// ];
-
-const uploadedTracksMock = [
-  {
-    id: 1,
-    title: "Neon Nights",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop",
-    mintDate: "2024-03-12",
-    sales: 45,
-    totalSupply: 100,
-    revenue: "22.5 ETH",
-  },
-  {
-    id: 2,
-    title: "Urban Legends",
-    image: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=200&h=200&fit=crop",
-    mintDate: "2024-02-28",
-    sales: 100,
-    totalSupply: 100,
-    revenue: "30.0 ETH",
-  },
-];
-
-/*
-const tipHistoryMock = [ // Mock data, to be replaced
-  {
-    id: 1,
-    type: "sent",
-    artist: "NebulaBeats",
-    track: "Cosmic Drift",
-    amount: "0.1 ETH",
-    date: "2024-03-16",
-  },
-  {
-    id: 2,
-    type: "received",
-    fan: "musicfan.eth",
-    track: "Neon Nights",
-    amount: "0.05 ETH",
-    date: "2024-03-15",
-  },
-];
-*/
+// Mock data definitions (profileDataMock, ownedTracksMock, uploadedTracksMock, tipHistoryMock)
+// have been removed as their functionality is covered by live data fetching.
 
 // ... (imports remain largely the same, ensure useReadContracts is imported)
 
@@ -345,8 +283,7 @@ export default function Profile() {
      return <div className="min-h-screen bg-gradient-dark text-white flex items-center justify-center"><p>No profile address specified.</p></div>;
   }
 
-  const isLoadingPage = isLoadingBalance || (!routeAddress && !isConnected);
-
+  // const isLoadingPage = isLoadingBalance || (!routeAddress && !isConnected); // Removed as specific loaders are used.
 
   return (
     <div className="min-h-screen bg-gradient-dark text-white">

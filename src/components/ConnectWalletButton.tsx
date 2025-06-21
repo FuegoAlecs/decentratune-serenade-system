@@ -122,7 +122,7 @@ export function ConnectWalletButton() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-4 py-4">
-            {connectors.filter(c => c.ready && c.type !== ' объявлено').map((connector) => ( // Filter out potential 'announced' duplicates
+            {connectors.filter(c => c.ready).map((connector) => ( // Display all ready connectors
               <Button
                 key={connector.uid}
                 onClick={() => handleConnect(connector)}

@@ -1,91 +1,55 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Grid, List } from "lucide-react";
 import { TrackCard } from "@/components/TrackCard";
 import { TrackCardSkeleton, EmptyState } from "@/components/LoadingStates";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom"; // Link is not used directly in this transformed version yet
+import { useAllMusicNFTs, AppNftItem } from "@/hooks/contracts"; // Import the new hook and type
+import { Address } from 'ethers';
 
+const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
+
+// Mock genres and sort options - these would ideally come from metadata or backend if dynamic
 const genres = ["All", "Electronic", "Hip Hop", "Rock", "Jazz", "Classical", "Ambient"];
 const sortOptions = ["Newest", "Most Tipped", "Trending", "Price: Low to High", "Price: High to Low"];
 
-const musicNFTs = [
-  {
-    id: "1",
-    title: "Cosmic Drift",
-    artist: "NebulaBeats",
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop",
-    price: "0.5 ETH",
-    genre: "Electronic",
-    mintStatus: "Available" as const,
-    tips: 142,
-    duration: "3:42",
-    plays: 15420,
-    isNFT: true,
-  },
-  {
-    id: "2",
-    title: "Urban Legends",
-    artist: "CityVibes",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
-    price: "0.3 ETH",
-    genre: "Hip Hop",
-    mintStatus: "Sold Out" as const,
-    tips: 89,
-    duration: "4:18",
-    plays: 8930,
-    isNFT: true,
-  },
-  {
-    id: "3",
-    title: "Digital Dreams",
-    artist: "TechnoMage",
-    image: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=400&h=400&fit=crop",
-    price: "0.8 ETH",
-    genre: "Electronic",
-    mintStatus: "Limited" as const,
-    tips: 203,
-    duration: "5:23",
-    plays: 12580,
-    isNFT: true,
-  },
-  {
-    id: "4",
-    title: "Jazz Fusion 2040",
-    artist: "FutureJazz",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
-    price: "0.6 ETH",
-    genre: "Jazz",
-    mintStatus: "Available" as const,
-    tips: 156,
-    duration: "4:45",
-    plays: 9870,
-    isNFT: true,
-  },
-];
 
 export default function Explore() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedGenre, setSelectedGenre] = useState("All");
-  const [sortBy, setSortBy] = useState("Newest");
+  const [selectedGenre, setSelectedGenre] = useState("All"); // Genre filtering will need adaptation
+  const [sortBy, setSortBy] = useState("Newest"); // Sorting will need adaptation
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => setIsLoading(false), 1000);
-  }, []);
+  const {
+    data: allFetchedNfts,
+    isLoading: isLoadingNfts,
+    error: nftsError,
+  } = useAllMusicNFTs(musicNftContractAddress, 50); // Fetch up to 50 NFTs for explore page
 
-  const filteredNFTs = musicNFTs.filter(nft => {
-    const matchesGenre = selectedGenre === "All" || nft.genre === selectedGenre;
-    const matchesSearch = nft.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         nft.artist.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesGenre && matchesSearch;
-  });
+  // TODO: Implement filtering and sorting based on fetched data (allFetchedNfts)
+  // For now, basic search on title and artist (collectionName)
+  const filteredNFTs = useMemo(() => {
+    if (!allFetchedNfts) return [];
+    return allFetchedNfts.filter(nft => {
+      // const matchesGenre = selectedGenre === "All" // || nft.genre === selectedGenre; // Genre not directly in AppNftItem, would need to parse from rawMetadata.attributes
+      const matchesSearch = (nft.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                           (nft.collectionName?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      // return matchesGenre && matchesSearch;
+      return matchesSearch; // Genre filter disabled for now
+    });
+  }, [allFetchedNfts, searchQuery, selectedGenre]);
 
-  if (isLoading) {
+
+  // useEffect(() => {
+  //   // Simulate loading - No longer needed, use isLoadingNfts from hook
+  //   // setTimeout(() => setIsLoading(false), 1000);
+  // }, []);
+
+
+  if (isLoadingNfts) {
     return (
       <div className="min-h-screen bg-gradient-dark text-white px-4 py-6 sm:p-6"> {/* Adjusted Padding */}
         <div className="max-w-7xl mx-auto">
@@ -182,28 +146,56 @@ export default function Explore() {
         </div>
 
         {/* Results */}
-        {filteredNFTs.length === 0 ? (
+        {nftsError && (
+          <EmptyState
+            title="Error loading tracks"
+            description={nftsError.message || "Could not fetch music NFTs. Please try again later."}
+            actionText="Try Again"
+            onAction={() => {
+              // This would ideally trigger a refetch, react-query handles retries automatically on window focus by default.
+              // For manual refetch, the hook `useAllMusicNFTs` would need to expose the refetch function.
+              // For now, a page refresh or navigating away and back might be needed.
+              console.log("Attempting to refetch or guiding user to refresh...");
+            }}
+          />
+        )}
+        {!isLoadingNfts && !nftsError && filteredNFTs.length === 0 && (
           <EmptyState
             title="No tracks found"
-            description="Try adjusting your filters or search terms to discover more music."
+            description="Try adjusting your filters or search terms, or check back later for new music."
             actionText="Clear Filters"
             onAction={() => {
               setSelectedGenre("All");
               setSearchQuery("");
             }}
           />
-        ) : (
+        )}
+        {!isLoadingNfts && !nftsError && filteredNFTs.length > 0 && (
           <div className={`transition-all duration-500 ${viewMode === "grid" 
             ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             : "space-y-4"
           }`}>
-            {filteredNFTs.map((nft, index) => (
+            {filteredNFTs.map((nft: AppNftItem, index) => (
               <div
-                key={nft.id}
+                key={nft.id} // Assuming AppNftItem has a unique 'id' (token ID)
                 className="transition-all duration-300"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <TrackCard {...nft} />
+                <TrackCard
+                  id={nft.id}
+                  title={nft.name || "Untitled Track"}
+                  artist={nft.collectionName || "Unknown Artist"} // Or parse from metadata if available
+                  image={nft.imageUrl || "/placeholder.svg"} // Provide a fallback placeholder
+                  // The following props were in mock but not directly in AppNftItem.
+                  // TrackCard will need to handle their potential absence or they need to be fetched/derived.
+                  // price={"N/A"} // Example: price would come from a marketplace
+                  // genre={"N/A"} // Example: genre from metadata attributes
+                  // mintStatus={"Available"} // Example: status from contract state
+                  // tips={0} // Example: tips from backend/contract
+                  // duration={"0:00"} // Example: duration from metadata
+                  // plays={0} // Example: plays from backend
+                  isNFT={true} // All items from this hook are NFTs
+                />
               </div>
             ))}
           </div>

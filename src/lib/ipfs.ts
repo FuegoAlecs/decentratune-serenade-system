@@ -1,11 +1,11 @@
-import { NFTStorage, File as NFTStorageFile, Blob as NFTStorageBlob } from 'nft.storage';
+import lighthouse from '@lighthouse-web3/sdk';
 
-const nftStorageToken = import.meta.env.VITE_WEB_STORAGE_TOKEN;
+const lighthouseApiKey = import.meta.env.VITE_LIGHTHOUSE_API_KEY;
 
-if (!nftStorageToken) {
+if (!lighthouseApiKey) {
   console.error(
-    "VITE_WEB_STORAGE_TOKEN is not set. IPFS uploads will not work. " +
-    "Please get a token from https://nft.storage/manage/"
+    "VITE_LIGHTHOUSE_API_KEY is not set. IPFS uploads will not work. " +
+    "Please get an API key from https://files.lighthouse.storage/ or https://lighthouse.storage/"
   );
 }
 
@@ -29,11 +29,11 @@ interface UploadTrackArgs {
   audioFile: File;
   coverFile: File;
   metadataArgs: ERC721MetadataArgs;
-  onProgress?: (progress: { percent: number; stage: 'audio' | 'cover' | 'metadata' | 'done'; totalUploaded: number; totalSize: number }) => void;
+  onProgress?: (progress: { percent: number; stage: 'audio' | 'cover' | 'metadata' | 'done'; totalUploaded: number; totalSize: number, message?: string }) => void;
 }
 
 /**
- * Uploads track (audio, cover) and its metadata to IPFS using NFT.Storage.
+ * Uploads track (audio, cover) and its metadata to IPFS using Lighthouse.
  * @returns The CID of the uploaded ERC-721 metadata JSON.
  */
 export async function uploadTrack({
@@ -42,66 +42,85 @@ export async function uploadTrack({
   metadataArgs,
   onProgress,
 }: UploadTrackArgs): Promise<string> {
-  if (!nftStorageToken) {
-    throw new Error("VITE_WEB_STORAGE_TOKEN is not configured. Cannot upload to IPFS.");
+  if (!lighthouseApiKey) {
+    throw new Error("VITE_LIGHTHOUSE_API_KEY is not configured. Cannot upload to IPFS.");
   }
 
-  const client = new NFTStorage({ token: nftStorageToken });
+  const totalSize = audioFile.size + coverFile.size; // Approximate total for progress (metadata is small)
+  let uploadedAudioSize = 0;
+  let uploadedCoverSize = 0;
 
-  let totalUploadedForAudio = 0;
-  let totalUploadedForCover = 0;
-  const totalSize = audioFile.size + coverFile.size; // Approximate total for progress calculation (metadata is small)
-
-  const reportProgress = (
-    stage: 'audio' | 'cover' | 'metadata',
-    chunkSize: number,
-    currentFileTotalUploaded: number,
-    currentFileSize: number
-  ) => {
+  const progressCallback = (stage: 'audio' | 'cover' | 'metadata', progress: { total: number; uploaded: number }) => {
     if (onProgress) {
-      const overallUploaded = (stage === 'audio' ? totalUploadedForAudio : totalUploadedForCover) + (stage === 'cover' && stage !== 'audio' ? totalUploadedForAudio : 0);
-      const percent = totalSize > 0 ? Math.min(((overallUploaded + chunkSize) / totalSize) * 100, 100) : 0;
+      let currentStageUploaded = 0;
+      let overallUploaded = 0;
 
-      if (stage === 'audio') totalUploadedForAudio = currentFileTotalUploaded;
-      if (stage === 'cover') totalUploadedForCover = currentFileTotalUploaded;
+      if (stage === 'audio') {
+        uploadedAudioSize = progress.uploaded;
+        currentStageUploaded = uploadedAudioSize;
+        overallUploaded = uploadedAudioSize;
+      } else if (stage === 'cover') {
+        uploadedCoverSize = progress.uploaded;
+        currentStageUploaded = uploadedCoverSize;
+        overallUploaded = uploadedAudioSize + uploadedCoverSize;
+      }
+      // Metadata upload is quick, specific progress for it might be overkill,
+      // but we can update overall progress after it's done.
 
+      const percent = totalSize > 0 ? Math.min((overallUploaded / totalSize) * 100, 100) : 0;
       onProgress({
         percent: parseFloat(percent.toFixed(2)),
         stage,
-        totalUploaded: overallUploaded + chunkSize,
-        totalSize
+        totalUploaded: overallUploaded,
+        totalSize,
+        message: `${stage} upload progress: ${currentStageUploaded} / ${stage === 'audio' ? audioFile.size : coverFile.size}`
       });
     }
   };
 
+
+  // Event listeners for File objects (used by Lighthouse SDK)
+  // This is a conceptual placeholder. Lighthouse SDK's upload function takes event (File object)
+  // and an API key. The progress is handled by its internal mechanism, which we tap into via a callback.
+
   // 1. Upload Audio File
-  let audioFileTotalUploaded = 0;
-  const audioCid = await client.storeBlob(
-    new NFTStorageBlob([audioFile], { type: audioFile.type }),
-    {
-      onStoredChunk: (chunkSize) => {
-        audioFileTotalUploaded += chunkSize;
-        reportProgress('audio', chunkSize, audioFileTotalUploaded, audioFile.size);
-      }
+  if (onProgress) onProgress({ percent: 0, stage: 'audio', totalUploaded: 0, totalSize, message: "Starting audio upload..." });
+  const audioUploadResult = await lighthouse.upload(
+    [{ name: audioFile.name, type: audioFile.type, size: audioFile.size, lastModified: audioFile.lastModified, webkitRelativePath: (audioFile as any).webkitRelativePath, arrayBuffer: () => audioFile.arrayBuffer() } as any], // Lighthouse expects an event-like object or array of File objects
+    lighthouseApiKey,
+    false, // show-progress parameter - false as we have a custom callback
+    (progressStatus: { total: number; uploaded: number; }) => { // This is the progress callback from Lighthouse
+      progressCallback('audio', progressStatus);
     }
   );
-  if (onProgress) reportProgress('audio', 0, audioFile.size, audioFile.size); // Final progress for audio
+  if (!audioUploadResult.data || !audioUploadResult.data.Hash) {
+    throw new Error("Lighthouse audio upload failed: No CID returned.");
+  }
+  const audioCid = audioUploadResult.data.Hash;
+  uploadedAudioSize = audioFile.size; // Ensure progress reflects full upload
+  if (onProgress) onProgress({ percent: (uploadedAudioSize / totalSize) * 100, stage: 'audio', totalUploaded: uploadedAudioSize, totalSize, message: "Audio upload complete." });
+
 
   // 2. Upload Cover File
-  let coverFileTotalUploaded = 0;
-  const coverCid = await client.storeBlob(
-    new NFTStorageBlob([coverFile], { type: coverFile.type }),
-    {
-      onStoredChunk: (chunkSize) => {
-        coverFileTotalUploaded += chunkSize;
-        reportProgress('cover', chunkSize, coverFileTotalUploaded, coverFile.size);
-      }
+  if (onProgress) onProgress({ percent: (uploadedAudioSize / totalSize) * 100, stage: 'cover', totalUploaded: uploadedAudioSize, totalSize, message: "Starting cover upload..." });
+  const coverUploadResult = await lighthouse.upload(
+    [{ name: coverFile.name, type: coverFile.type, size: coverFile.size, lastModified: coverFile.lastModified, webkitRelativePath: (coverFile as any).webkitRelativePath, arrayBuffer: () => coverFile.arrayBuffer() } as any],
+    lighthouseApiKey,
+    false,
+    (progressStatus: { total: number; uploaded: number; }) => {
+      progressCallback('cover', progressStatus);
     }
   );
-  if (onProgress) reportProgress('cover', 0, coverFile.size, coverFile.size); // Final progress for cover
+  if (!coverUploadResult.data || !coverUploadResult.data.Hash) {
+    throw new Error("Lighthouse cover upload failed: No CID returned.");
+  }
+  const coverCid = coverUploadResult.data.Hash;
+  uploadedCoverSize = coverFile.size; // Ensure progress reflects full upload
+  if (onProgress) onProgress({ percent: ((uploadedAudioSize + uploadedCoverSize) / totalSize) * 100, stage: 'cover', totalUploaded: uploadedAudioSize + uploadedCoverSize, totalSize, message: "Cover upload complete." });
 
 
   // 3. Construct and Upload ERC-721 Metadata JSON
+  if (onProgress) onProgress({ percent: ((uploadedAudioSize + uploadedCoverSize) / totalSize) * 100, stage: 'metadata', totalUploaded: uploadedAudioSize + uploadedCoverSize, totalSize, message: "Preparing metadata..." });
   const erc721Metadata = {
     name: metadataArgs.name,
     description: metadataArgs.description || "",
@@ -122,13 +141,33 @@ export async function uploadTrack({
   if (!erc721Metadata.external_url) delete erc721Metadata.external_url;
   if (erc721Metadata.attributes.length === 0) delete erc721Metadata.attributes;
 
+  const metadataString = JSON.stringify(erc721Metadata);
+  // Convert string to a File-like object for Lighthouse
+  const metadataFile = new File([metadataString], "metadata.json", { type: "application/json" });
 
-  const metadataBlob = new NFTStorageBlob([JSON.stringify(erc721Metadata)], { type: 'application/json' });
-  const metadataCid = await client.storeBlob(metadataBlob);
+
+  // Lighthouse's upload expects an array of File-like objects or an event object from a file input.
+  // We need to ensure our manually created File object is compatible.
+  // The SDK might expect a full File object from an input event, so we might need to pass it as an array.
+  const metadataUploadResult = await lighthouse.upload(
+     [{ name: metadataFile.name, type: metadataFile.type, size: metadataFile.size, lastModified: metadataFile.lastModified, webkitRelativePath: '', arrayBuffer: () => metadataFile.arrayBuffer() } as any],
+    lighthouseApiKey,
+    false, // No progress needed for small metadata JSON
+    undefined // No progress callback
+  );
+
+  if (!metadataUploadResult.data || !metadataUploadResult.data.Hash) {
+    throw new Error("Lighthouse metadata upload failed: No CID returned.");
+  }
+  const metadataCid = metadataUploadResult.data.Hash;
 
   if (onProgress) {
-    onProgress({ percent: 100, stage: 'metadata', totalUploaded: totalSize, totalSize }); // Metadata upload is quick
-    onProgress({ percent: 100, stage: 'done', totalUploaded: totalSize, totalSize });
+    // Ensure totalUploaded reflects the sum of actual file sizes for accuracy in the 'done' stage.
+    const finalTotalUploaded = audioFile.size + coverFile.size + metadataFile.size;
+    const finalTotalSize = audioFile.size + coverFile.size + metadataFile.size; // More accurate total size
+
+    onProgress({ percent: 100, stage: 'metadata', totalUploaded: finalTotalUploaded, totalSize: finalTotalSize, message: "Metadata upload complete." });
+    onProgress({ percent: 100, stage: 'done', totalUploaded: finalTotalUploaded, totalSize: finalTotalSize, message: "All uploads finished." });
   }
 
   return metadataCid;

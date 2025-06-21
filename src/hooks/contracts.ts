@@ -213,3 +213,56 @@ export function useTracksOwned(ownerAddress?: Address) {
 
 // TODO: Consider useTrackDetails hook for fetching single track details (tokenURI + on-chain data).
 // `TrackDetails.tsx` still uses direct contract reads.
+
+
+// --- Hook to Get All NFTs for a specific contract (e.g., for an Explore page) ---
+export function useAllMusicNFTs(contractAddr?: Address, pageSize: number = 20) {
+  return useQuery<AppNftItem[], Error>({
+    queryKey: ['allMusicNfts', contractAddr, pageSize],
+    queryFn: async () => {
+      if (!contractAddr) return [];
+      if (!alchemy) {
+        console.warn("Alchemy SDK not initialized. Cannot fetch all NFTs for contract.");
+        throw new Error("Alchemy SDK not available");
+      }
+      try {
+        // Note: getNftsForContract can return a lot of data.
+        // Consider pagination or more specific fetching if performance becomes an issue.
+        // The `omitMetadata: false` (default) ensures we get metadata to transform.
+        // `pageSize` can be used if the API supports it directly or for client-side limiting after fetch.
+        // Alchemy's getNftsForContract does not directly support pageSize in the same way as getNftsForOwner.
+        // It might return all, or have its own pagination mechanism using `pageKey`.
+        // For simplicity, fetching all and potentially slicing/paginating client-side or fetching in batches if needed.
+
+        let allNfts: OwnedNft[] = [];
+        let pageKey: string | undefined = undefined;
+        let attempts = 0; // Safety break for loop
+        const maxAttempts = 10; // Fetch up to 10 pages, adjust as needed
+
+        // Basic pagination example if we want to fetch more than the default (often 100)
+        // For a simple explore page, one page might be enough, or implement proper pagination UI.
+        // This example fetches a few pages up to `pageSize` or `maxAttempts`.
+        do {
+          const response = await alchemy.nft.getNftsForContract(contractAddr, {
+            // omitMetadata: false, // default
+            pageKey: pageKey,
+          });
+          allNfts = allNfts.concat(response.nfts);
+          pageKey = response.pageKey;
+          attempts++;
+        } while (pageKey && allNfts.length < pageSize && attempts < maxAttempts);
+
+
+        // If we fetched more than pageSize due to pageKey fetching full pages, slice it.
+        const nftsToDisplay = allNfts.slice(0, pageSize);
+
+        return nftsToDisplay.map(transformAlchemyNft);
+      } catch (e) {
+        console.error(`Error fetching NFTs for contract ${contractAddr} from Alchemy:`, e);
+        throw e;
+      }
+    },
+    enabled: !!contractAddr && !!alchemy,
+    staleTime: 1000 * 60 * 5, // 5 minutes for explore page data
+  });
+}
