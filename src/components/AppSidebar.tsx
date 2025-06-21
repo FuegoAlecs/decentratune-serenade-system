@@ -12,6 +12,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Link } from "react-router-dom"; // Import Link
 
 const menuItems = [
   {
@@ -82,10 +83,10 @@ export function AppSidebar() {
                     asChild 
                     className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
                   >
-                    <a href={item.url} className="flex items-center space-x-3 px-4">
+                    <Link to={item.url} className="flex items-center space-x-3 px-4"> {/* Use Link and to */}
                       <item.icon className="h-5 w-5" />
                       <span className="font-medium">{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -102,10 +103,10 @@ export function AppSidebar() {
                 asChild 
                 className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
               >
-                <a href={item.url} className="flex items-center space-x-3 px-4">
+                <Link to={item.url} className="flex items-center space-x-3 px-4"> {/* Use Link and to */}
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
