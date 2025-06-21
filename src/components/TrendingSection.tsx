@@ -1,5 +1,5 @@
 
-import { TrendingUp, Fire } from "lucide-react";
+import { TrendingUp, Flame } from "lucide-react";
 
 const trendingTracks = [
   { rank: 1, title: "Blockchain Boogie", artist: "CryptoFunk", change: "+12" },
@@ -13,7 +13,7 @@ export function TrendingSection() {
   return (
     <section className="mb-12">
       <div className="flex items-center mb-8">
-        <Fire className="h-6 w-6 text-orange-500 mr-3" />
+        <Flame className="h-6 w-6 text-orange-500 mr-3" />
         <h2 className="font-satoshi font-bold text-3xl text-white">Trending Now</h2>
       </div>
 
