@@ -17,8 +17,8 @@ export function MusicPlayer() {
     duration: "3:42",
   };
 
-  const formatTime = (seconds: number) // Helper, assuming fixed duration for now
-    => `${Math.floor(seconds/60)}:${(seconds%60).toString().padStart(2, '0')}`;
+  const formatTime = (seconds: number) => // Helper, assuming fixed duration for now
+    `${Math.floor(seconds/60)}:${(seconds%60).toString().padStart(2, '0')}`;
 
 
   return (
