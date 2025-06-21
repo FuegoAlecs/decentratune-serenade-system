@@ -82,9 +82,10 @@ const uploadedTracksMock = [
   },
 ];
 
-// const tipHistoryMock = [ // Mock data, to be replaced
-//   {
-//     id: 1,
+/*
+const tipHistoryMock = [ // Mock data, to be replaced
+  {
+    id: 1,
     type: "sent",
     artist: "NebulaBeats",
     track: "Cosmic Drift",
@@ -100,6 +101,7 @@ const uploadedTracksMock = [
     date: "2024-03-15",
   },
 ];
+*/
 
 // ... (imports remain largely the same, ensure useReadContracts is imported)
 
