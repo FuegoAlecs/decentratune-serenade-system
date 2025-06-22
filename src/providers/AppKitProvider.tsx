@@ -16,7 +16,8 @@ const projectId = 'd037b3479d501b08798dfb857b9a0cb4';
 const metadata = {
   name: 'DecentraTune', // Updated App Name
   description: 'Decentralized Music Platform', // Updated Description
-  url: window.location.origin, // Dynamically set based on current origin
+  // url: window.location.origin, // This can cause issues during build if window is not defined
+  url: import.meta.env.VITE_APP_URL || 'https://example.com', // Use env variable or a placeholder
   icons: ['https://assets.reown.com/reown-profile-pic.png'] // Placeholder icon, user might want to change this
 };
 
