@@ -5,14 +5,15 @@ import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
 
 interface TrackCardProps {
-  id: string;
+  id: string; // Token ID
   title: string;
   artist: string;
-  duration: string;
   image?: string;
+  audioUrl?: string; // Added to receive the audio URL for playback
+  duration?: string; // Optional: metadata might not have it, player will determine
   plays?: number;
   isNFT?: boolean;
-  isOwned?: boolean;
+  isOwned?: boolean; // Important for deciding full vs preview play
   price?: string;
   mintStatus?: "Available" | "Limited" | "Sold Out";
 }
@@ -21,24 +22,48 @@ export function TrackCard({
   id, 
   title, 
   artist, 
-  duration, 
+  image = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop", // Default image
+  audioUrl,
+  duration = "0:00", // Default duration, actual will be determined by AudioContext
   plays, 
   isNFT, 
   isOwned, 
   price, 
   mintStatus,
-  image = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop" // Default image
 }: TrackCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false); // Confetti can be themed if needed
-  const { playTrack, currentTrack, isPlaying } = useAudio();
+  const [showConfetti, setShowConfetti] = useState(false);
+  const { playTrack, currentTrack, isPlaying, isLoading } = useAudio(); // Added isLoading
 
-  const isCurrentTrack = currentTrack?.id === id;
+  const isCurrentTrackPlaying = currentTrack?.id === id && isPlaying;
+  const isCurrentTrackLoading = currentTrack?.id === id && isLoading; // Check if this specific track is loading
 
   const handlePlay = () => {
-    const track = { id, title, artist, image, duration, isNFT, isOwned };
-    playTrack(track, !isOwned); // Play preview if not owned
+    if (!audioUrl) {
+      console.warn("No audio URL provided for track:", title);
+      // Optionally, inform the user via a toast or alert
+      return;
+    }
+    // Construct the Track object for AudioContext
+    // For now, assume `isOwned` determines if fullUrl or previewUrl is used.
+    // If your NFT metadata provides separate preview and full URLs, adjust accordingly.
+    const trackForPlayer = {
+      id,
+      title,
+      artist,
+      image,
+      duration, // Initial duration, AudioContext will update with actual
+      fullUrl: audioUrl, // Assuming audioUrl is the full version
+      previewUrl: isOwned ? undefined : audioUrl, // Play full if owned, else treat audioUrl as preview (or adapt if separate preview exists)
+      isNFT,
+      isOwned
+    };
+
+    // If it's a preview, `isPreview` should be true.
+    // If the user owns the track, `isOwned` is true, so `!isOwned` is false (play full version).
+    // If the user does not own the track, `isOwned` is false, so `!isOwned` is true (play preview version).
+    playTrack(trackForPlayer, !isOwned);
   };
 
   const handleLike = () => {
@@ -93,16 +118,21 @@ export function TrackCard({
         <div
           className={`absolute inset-0 bg-black/30 dark:bg-black/50 rounded-lg sm:rounded-xl
                       flex items-center justify-center
-                      transition-opacity duration-300 ${isHovered || isCurrentTrack ? 'opacity-100' : 'opacity-0'}`}
+                      transition-opacity duration-300 ${isHovered || isCurrentTrackPlaying || isCurrentTrackLoading ? 'opacity-100' : 'opacity-0'}`}
         >
           <Button 
             onClick={handlePlay}
+            disabled={isCurrentTrackLoading} // Disable button if this track is loading
             // Themed play button: white background, dark text for contrast on overlay
             className="w-12 h-12 sm:w-14 sm:h-14 bg-white hover:bg-gray-200 dark:bg-dark-card-surface dark:hover:bg-dark-borders-lines rounded-full hover:scale-110 transition-all duration-200"
             aria-label="Play track"
           >
-            {isCurrentTrack && isPlaying ? (
+            {isCurrentTrackLoading ? (
               <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-light-text-primary dark:border-dark-text-primary border-t-transparent rounded-full animate-spin" />
+            ) : isCurrentTrackPlaying ? (
+              // TODO: Replace with Pause icon from lucide-react if you want to allow pause from here
+              // For now, spinning loader indicates it's active and playing, or use a static playing indicator
+              <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-light-text-primary dark:border-dark-text-primary border-t-transparent rounded-full animate-spin" /> // Placeholder for playing state
             ) : (
               <Play className="h-5 w-5 sm:h-6 sm:h-6 text-light-text-primary dark:text-dark-text-primary ml-0.5" />
             )}

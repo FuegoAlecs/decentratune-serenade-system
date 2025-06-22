@@ -10,26 +10,41 @@ export function PersistentAudioPlayer() {
     currentTrack, 
     isPlaying, 
     isLoading, 
-    progress, 
-    volume, 
+    currentTrack,
+    isPlaying,
+    isLoading,
+    progress, // This is now percentage 0-100
+    volume, // This is now 0-100
+    duration, // This is actual duration in seconds
     isPreviewMode,
     pauseTrack, 
     resumeTrack, 
-    setProgress, 
-    setVolume,
+    setProgress, // Expects percentage 0-100
+    setVolume, // Expects 0-100
     nextTrack,
     previousTrack
   } = useAudio();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(false); // Keep local like state for now
 
   if (!currentTrack) return null;
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+  const formatTime = (timeInSeconds: number) => {
+    const mins = Math.floor(timeInSeconds / 60);
+    const secs = Math.floor(timeInSeconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const handleProgressChange = (value: number[]) => {
+    setProgress(value[0]); // setProgress now expects a percentage
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0]); // setVolume now expects 0-100
+  };
+
+  // Calculate current time in seconds based on progress percentage and duration
+  const currentTimeInSeconds = duration > 0 ? (progress / 100) * duration : 0;
 
   return (
     <>
@@ -112,15 +127,15 @@ export function PersistentAudioPlayer() {
             
             {/* Progress bar: hidden on mobile, visible md+ */}
             <div className="hidden md:flex items-center space-x-2 w-full">
-              <span className="text-dt-gray-light text-xs">{formatTime(progress * 3.5 * 60 / 100)}</span>
+              <span className="text-dt-gray-light text-xs">{formatTime(currentTimeInSeconds)}</span>
               <Slider
-                value={[progress]}
-                onValueChange={(value) => setProgress(value[0])}
+                value={[progress]} // progress is already a percentage
+                onValueChange={handleProgressChange}
                 max={100}
                 step={1}
                 className="flex-1"
               />
-              <span className="text-dt-gray-light text-xs">{currentTrack.duration}</span>
+              <span className="text-dt-gray-light text-xs">{formatTime(duration)}</span>
             </div>
           </div>
 
@@ -132,8 +147,8 @@ export function PersistentAudioPlayer() {
             <div className="hidden lg:flex items-center space-x-2"> {/* Volume hidden on md, visible lg+ */}
               <Volume2 className="h-5 w-5 text-dt-gray-light" />
               <Slider
-                value={[volume]}
-                onValueChange={(value) => setVolume(value[0])}
+                value={[volume]} // volume is 0-100
+                onValueChange={handleVolumeChange}
                 max={100}
                 step={1}
                 className="w-20 lg:w-24" // Slightly smaller base for volume slider

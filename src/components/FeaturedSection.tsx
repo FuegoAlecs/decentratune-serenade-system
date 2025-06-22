@@ -106,11 +106,16 @@ export function FeaturedSection() {
           {featuredTracks.map((track) => (
             <TrackCard
               key={track.id}
-              id={track.id}
+              id={track.id} // Already a string from AppNftItem
               title={track.name || "Untitled Track"}
               artist={track.collectionName || "Unknown Artist"}
               image={track.imageUrl || "/placeholder.svg"}
-              // price, genre, etc. are not available directly, TrackCard needs to handle this
+              audioUrl={track.audioUrl} // Pass the audioUrl
+              // TODO: Duration might not be available directly from metadata here.
+              // The AudioContext will determine it once loaded.
+              // We can pass a placeholder or omit if TrackCard handles it.
+              // For now, let TrackCard pass undefined or a placeholder to AudioContext.
+              // TrackCard will construct the Track object for AudioContext.
               isNFT={true}
             />
           ))}
