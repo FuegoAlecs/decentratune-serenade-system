@@ -8,8 +8,20 @@ import { TrendingSection } from "@/components/TrendingSection";
 import { StatsSection } from "@/components/StatsSection";
 import { Button } from "@/components/ui/button";
 import { Search, Bell, User } from "lucide-react";
+import { MetaMaskConnectButton } from "@/components/MetaMaskConnectButton"; // Added import
+import { Link, useNavigate } from "react-router-dom"; // Added import & useNavigate
+import { useState } from "react"; // Added import
 
 const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      navigate(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-dark">
@@ -26,6 +38,13 @@ const Index = () => {
                   <input
                     type="text"
                     placeholder="Search tracks, artists, or NFTs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearchSubmit();
+                      }
+                    }}
                     // Updated to use new theme colors, focus ring, and responsive width
                     className="bg-light-card-surface/80 dark:bg-dark-card-surface/80 border border-light-borders-lines dark:border-dark-borders-lines rounded-xl pl-10 pr-4 py-2 text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary focus:outline-none focus:ring-2 focus:ring-ring ring-offset-light-background dark:ring-offset-dark-background w-full sm:w-64 md:w-80 transition-all duration-200"
                   />
@@ -36,13 +55,12 @@ const Index = () => {
                 <Button variant="ghost" size="icon" className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary"> {/* Icon size and themed colors */}
                   <Bell className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary"> {/* Icon size and themed colors */}
-                  <User className="h-5 w-5" />
-                </Button>
-                {/* This button already uses .btn-primary which is themed in index.css */}
-                <Button className="btn-primary text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"> {/* Responsive padding and text */}
-                  Connect Wallet
-                </Button>
+                <Link to="/profile">
+                  <Button variant="ghost" size="icon" className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary"> {/* Icon size and themed colors */}
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <MetaMaskConnectButton />
               </div>
             </div>
           </header>
