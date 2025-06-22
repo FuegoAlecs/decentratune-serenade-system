@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react'; // Added useEffect
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiProvider } from 'wagmi';
 import { sepolia } from 'wagmi/chains'; // Using wagmi/chains for sepolia
@@ -16,8 +16,7 @@ const projectId = 'd037b3479d501b08798dfb857b9a0cb4';
 const metadata = {
   name: 'DecentraTune', // Updated App Name
   description: 'Decentralized Music Platform', // Updated Description
-  // url: window.location.origin, // This can cause issues during build if window is not defined
-  url: import.meta.env.VITE_APP_URL || 'https://example.com', // Use env variable or a placeholder
+  url: 'https://decentratune-serenade-system.vercel.app/', // Updated with user's provided URL
   icons: ['https://assets.reown.com/reown-profile-pic.png'] // Placeholder icon, user might want to change this
 };
 
@@ -35,22 +34,34 @@ const wagmiAdapter = new WagmiAdapter({
   ssr: true
 });
 
-// 5. Create modal
-createAppKit({
-  adapters: [wagmiAdapter],
-  networks,
-  projectId,
-  metadata,
-  features: {
-    analytics: true // Optional - defaults to your Cloud configuration
-  }
-});
+// 5. Create modal - Moved into useEffect
+// createAppKit({
+//   adapters: [wagmiAdapter],
+//   networks,
+//   projectId,
+//   metadata,
+//   features: {
+//     analytics: true // Optional - defaults to your Cloud configuration
+//   }
+// });
 
 interface AppKitProviderProps {
   children: ReactNode;
 }
 
 export function AppKitProvider({ children }: AppKitProviderProps) {
+  useEffect(() => {
+    createAppKit({
+      adapters: [wagmiAdapter],
+      networks,
+      projectId,
+      metadata,
+      features: {
+        analytics: true // Optional - defaults to your Cloud configuration
+      }
+    });
+  }, []); // Empty dependency array ensures this runs once on mount
+
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
