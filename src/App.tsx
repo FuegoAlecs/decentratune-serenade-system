@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ArtistsPlaceholder from "./pages/Artists"; // Import new Artists page
 import WalletPlaceholder from "./pages/Wallet"; // Import new Wallet page
+import { NetworkGuard } from "@/components/NetworkGuard"; // Import NetworkGuard
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
       <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NetworkGuard /> {/* Render NetworkGuard globally */}
           <div className="min-h-screen bg-gradient-dark pb-24">
             <Routes>
               <Route path="/" element={<Index />} />
