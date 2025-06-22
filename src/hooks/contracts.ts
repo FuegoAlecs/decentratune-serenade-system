@@ -155,19 +155,53 @@ export interface AppNftItem {
 
 const transformAlchemyNft = (alchemyNft: OwnedNft): AppNftItem => {
     // Attempt to find image and audio URLs from various possible places in Alchemy's media/metadata
+    const pinataGateway = "https://harlequin-leading-squirrel-331.mypinata.cloud/ipfs/";
+
     let imageUrl = alchemyNft.media?.[0]?.gateway || alchemyNft.raw?.metadata?.image || alchemyNft.contract?.openSeaMetadata?.imageUrl;
     if (imageUrl?.startsWith("ipfs://")) {
-        imageUrl = `https://ipfs.io/ipfs/${imageUrl.substring(7)}`;
+        imageUrl = `${pinataGateway}${imageUrl.substring(7)}`;
+    } else if (imageUrl && !imageUrl.startsWith("http")) { // Assuming raw CID for image if not starting with http
+        // This case might need refinement if image CIDs could be non-IPFS identifiers
+        // For now, let's assume if it's not ipfs:// and not http(s)://, it could be a raw CID
+        // However, image URLs from `alchemyNft.media[0].gateway` should already be HTTP URLs.
+        // This primarily targets `alchemyNft.raw.metadata.image`.
+        const looksLikeCid = imageUrl.length > 40 && (imageUrl.startsWith("Qm") || imageUrl.startsWith("bafy")); // Basic CID check
+        if (looksLikeCid) {
+            imageUrl = `${pinataGateway}${imageUrl}`;
+        }
     }
 
-    // Audio URL is less standard, might be in attributes or a custom metadata field
-    let audioUrl = alchemyNft.raw?.metadata?.audio || alchemyNft.raw?.metadata?.animation_url;
-    if (audioUrl?.startsWith("ipfs://")) {
-        audioUrl = `https://ipfs.io/ipfs/${audioUrl.substring(7)}`;
+
+    let audioUrl: string | undefined = undefined;
+    const rawMetadata = alchemyNft.raw?.metadata;
+
+    if (rawMetadata) {
+        const animationUrlField = rawMetadata.animation_url;
+        const audioField = rawMetadata.audio;
+
+        if (typeof animationUrlField === 'string' && animationUrlField.trim() !== '') {
+            if (animationUrlField.startsWith("ipfs://")) {
+                audioUrl = `${pinataGateway}${animationUrlField.substring(7)}`;
+            } else if (!animationUrlField.startsWith("http")) { // Assume raw CID
+                audioUrl = `${pinataGateway}${animationUrlField}`;
+            } else {
+                audioUrl = animationUrlField; // Already a full URL
+            }
+        } else if (typeof audioField === 'string' && audioField.trim() !== '') {
+            // Fallback to audio field
+            if (audioField.startsWith("ipfs://")) {
+                audioUrl = `${pinataGateway}${audioField.substring(7)}`;
+            } else if (!audioField.startsWith("http")) { // Assume raw CID
+                audioUrl = `${pinataGateway}${audioField}`;
+            } else {
+                audioUrl = audioField; // Already a full URL
+            }
+        }
     }
+    // If audioUrl is still undefined here, it means neither animation_url nor audio field provided a usable value.
 
     return {
-        id: alchemyNft.tokenId, // Alchemy's tokenId is usually a hex string for ERC721
+        id: alchemyNft.tokenId,
         name: alchemyNft.name || alchemyNft.contract?.name || 'Unnamed NFT',
         description: alchemyNft.description || alchemyNft.contract?.openSeaMetadata?.description,
         imageUrl: imageUrl,
