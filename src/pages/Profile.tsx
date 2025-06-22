@@ -420,20 +420,7 @@ export default function Profile() {
         {activeTab === "tips" && (
           // TODO: Implement fetching and display for tip history
           <div className="space-y-4">
-            {/* {tipHistoryMock.map((tip) => ( // Still using mock
-              <div key={tip.id} className="glass-card p-6 rounded-2xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${ tip.type === "sent" ? "bg-red-500/20 text-red-500" : "bg-green-500/20 text-green-500" }`}> <TrendingUp className="h-6 w-6" /> </div>
-                    <div>
-                      <p className="font-semibold"> {tip.type === "sent" ? `Tipped ${tip.artist}` : `Tip from ${tip.fan}`} </p>
-                      <p className="text-dt-gray-light text-sm"> Track: {tip.track} • {tip.date} </p>
-                    </div>
-                  </div>
-                  <span className={`font-semibold ${ tip.type === "sent" ? "text-red-500" : "text-green-500" }`}> {tip.type === "sent" ? "-" : "+"}{tip.amount} </span>
-                </div>
-              </div>
-            ))} */}
+            {/* Tip history display will be implemented here, currently shows "coming soon" */}
             <p className="text-center text-dt-gray-light py-10">Tip history coming soon.</p>
           </div>
         )}

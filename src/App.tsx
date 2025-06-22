@@ -19,10 +19,9 @@ import WalletPlaceholder from "./pages/Wallet"; // Import new Wallet page
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AudioProvider>
-        <Toaster />
+  <TooltipProvider>
+    <AudioProvider>
+      <Toaster />
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-gradient-dark pb-24">
@@ -42,7 +41,6 @@ const App = () => (
         </BrowserRouter>
       </AudioProvider>
     </TooltipProvider>
-  </QueryClientProvider>
 );
 
 export default App;
