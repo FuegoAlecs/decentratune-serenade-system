@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 // import { WalletConnection } from "@/components/WalletConnection"; // Old button removed
 // import { ConnectButton } from '@reown/appkit/react'; // Incorrect import removed
+import { MetaMaskConnectButton } from "@/components/MetaMaskConnectButton";
 import { useAudio } from "@/contexts/AudioContext";
 import { useRecentTracks, AppNftItem } from "@/hooks/contracts"; // Import the new hook and type
 
@@ -94,7 +95,7 @@ export default function Landing() {
           >
             {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-          <appkit-button />
+          <MetaMaskConnectButton />
         </div>
       </header>
 
@@ -225,7 +226,7 @@ export default function Landing() {
           <p className="text-lg sm:text-xl text-dt-gray-light mb-8">
             Connect your wallet and start collecting exclusive tracks from independent artists worldwide.
           </p>
-          <appkit-button />
+          <MetaMaskConnectButton />
         </div>
       </section>
     </div>
