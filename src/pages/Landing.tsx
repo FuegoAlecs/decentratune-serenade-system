@@ -4,7 +4,7 @@ import { Play, Sun, Moon, TrendingUp, ArrowRight, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 // import { WalletConnection } from "@/components/WalletConnection"; // Old button removed
-import { ConnectButton } from '@reown/appkit/react'; // Assuming AppKit provides a button
+// import { ConnectButton } from '@reown/appkit/react'; // Incorrect import removed
 import { useAudio } from "@/contexts/AudioContext";
 import { useRecentTracks, AppNftItem } from "@/hooks/contracts"; // Import the new hook and type
 
@@ -94,7 +94,7 @@ export default function Landing() {
           >
             {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-          <ConnectButton />
+          <appkit-button />
         </div>
       </header>
 
@@ -225,7 +225,7 @@ export default function Landing() {
           <p className="text-lg sm:text-xl text-dt-gray-light mb-8">
             Connect your wallet and start collecting exclusive tracks from independent artists worldwide.
           </p>
-          <ConnectButton />
+          <appkit-button />
         </div>
       </section>
     </div>
