@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react"; // Added useEffect
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
