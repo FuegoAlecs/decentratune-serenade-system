@@ -1,6 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Play, Wallet } from "lucide-react";
+import { Play } from "lucide-react"; // Removed Wallet icon as it's in MetaMaskConnectButton
+import { MetaMaskConnectButton } from "@/components/MetaMaskConnectButton";
+import { Link } from "react-router-dom"; // Import Link
 
 export function HeroSection() {
   return (
@@ -48,14 +50,13 @@ export function HeroSection() {
 
         {/* Buttons use .btn-primary and .btn-secondary from index.css which are now themeable */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button className="btn-primary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 w-full sm:w-auto">
-            <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Start Listening
-          </Button>
-          <Button className="btn-secondary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 w-full sm:w-auto">
-            <Wallet className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Connect Wallet
-          </Button>
+          <Link to="/explore" className="w-full sm:w-auto">
+            <Button className="btn-primary text-base sm:text-lg px-6 py-3 sm:px-8 sm:py-4 w-full">
+              <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              Start Listening
+            </Button>
+          </Link>
+          <MetaMaskConnectButton />
         </div>
 
         {/* Audio Visualizer uses new accent color */}
