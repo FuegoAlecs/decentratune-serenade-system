@@ -10,9 +10,6 @@ export function PersistentAudioPlayer() {
     currentTrack, 
     isPlaying, 
     isLoading, 
-    currentTrack,
-    isPlaying,
-    isLoading,
     progress, // This is now percentage 0-100
     volume, // This is now 0-100
     duration, // This is actual duration in seconds
