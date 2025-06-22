@@ -93,8 +93,19 @@ export async function uploadTrack({
       progressCallback('audio', progressStatus);
     }
   );
-  if (!audioUploadResult.data || !audioUploadResult.data.Hash) {
-    throw new Error("Lighthouse audio upload failed: No CID returned.");
+
+  // Enhanced error checking for audio upload
+  if (
+    !audioUploadResult ||
+    typeof audioUploadResult.data !== 'object' ||
+    audioUploadResult.data === null ||
+    typeof audioUploadResult.data.Hash !== 'string' ||
+    !audioUploadResult.data.Hash
+  ) {
+    console.error("Lighthouse audio upload failed. Unexpected response:", audioUploadResult);
+    throw new Error(
+      `Lighthouse audio upload failed. Expected { data: { Hash: "..." } } but received: ${JSON.stringify(audioUploadResult?.data).slice(0, 100)}`
+    );
   }
   const audioCid = audioUploadResult.data.Hash;
   uploadedAudioSize = audioFile.size; // Ensure progress reflects full upload
@@ -111,8 +122,19 @@ export async function uploadTrack({
       progressCallback('cover', progressStatus);
     }
   );
-  if (!coverUploadResult.data || !coverUploadResult.data.Hash) {
-    throw new Error("Lighthouse cover upload failed: No CID returned.");
+
+  // Enhanced error checking for cover upload
+  if (
+    !coverUploadResult ||
+    typeof coverUploadResult.data !== 'object' ||
+    coverUploadResult.data === null ||
+    typeof coverUploadResult.data.Hash !== 'string' ||
+    !coverUploadResult.data.Hash
+  ) {
+    console.error("Lighthouse cover upload failed. Unexpected response:", coverUploadResult);
+    throw new Error(
+      `Lighthouse cover upload failed. Expected { data: { Hash: "..." } } but received: ${JSON.stringify(coverUploadResult?.data).slice(0, 100)}`
+    );
   }
   const coverCid = coverUploadResult.data.Hash;
   uploadedCoverSize = coverFile.size; // Ensure progress reflects full upload
@@ -156,8 +178,18 @@ export async function uploadTrack({
     undefined // No progress callback
   );
 
-  if (!metadataUploadResult.data || !metadataUploadResult.data.Hash) {
-    throw new Error("Lighthouse metadata upload failed: No CID returned.");
+  // Enhanced error checking for metadata upload
+  if (
+    !metadataUploadResult ||
+    typeof metadataUploadResult.data !== 'object' ||
+    metadataUploadResult.data === null ||
+    typeof metadataUploadResult.data.Hash !== 'string' ||
+    !metadataUploadResult.data.Hash
+  ) {
+    console.error("Lighthouse metadata upload failed. Unexpected response:", metadataUploadResult);
+    throw new Error(
+      `Lighthouse metadata upload failed. Expected { data: { Hash: "..." } } but received: ${JSON.stringify(metadataUploadResult?.data).slice(0, 100)}`
+    );
   }
   const metadataCid = metadataUploadResult.data.Hash;
 
