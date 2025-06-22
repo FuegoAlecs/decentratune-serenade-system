@@ -3,6 +3,7 @@ import {
     useAccount,
     useWriteContract,
     useWaitForTransactionReceipt,
+    usePublicClient, // Added usePublicClient
     // useReadContract, // May need for useTracksOwned if not using Alchemy, or for other hooks
     // useReadContracts // May need for useTracksOwned if not using Alchemy
 } from 'wagmi';
@@ -266,3 +267,107 @@ export function useAllMusicNFTs(contractAddr?: Address, pageSize: number = 20) {
     staleTime: 1000 * 60 * 5, // 5 minutes for explore page data
   });
 }
+
+// --- Hook to Get Recently Minted Tracks ---
+export function useRecentTracks(count: number = 5) {
+  const { data: publicClient } = usePublicClient(); // Get public client from wagmi
+
+  return useQuery<AppNftItem[], Error>({
+    queryKey: ['recentTracks', count],
+    queryFn: async () => {
+      if (!publicClient) {
+        console.warn("Public client not available. Cannot fetch recent tracks.");
+        throw new Error("Public client not available");
+      }
+      if (!musicNftContractAddress) {
+        console.warn("MusicNFT contract address not configured.");
+        throw new Error("MusicNFT contract address not configured");
+      }
+
+      try {
+        // Fetch TrackMinted events
+        // Note: Fetching events can be resource-intensive.
+        // For production, a dedicated indexing service (like The Graph) is often better.
+        // This example fetches logs from the last N blocks or a fixed range.
+        // Adjust block range as needed for performance and desired recency.
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock > BigInt(2000) ? currentBlock - BigInt(2000) : BigInt(0); // Look back ~1 hour on Sepolia (12s block time)
+
+        const logs = await publicClient.getLogs({
+          address: musicNftContractAddress,
+          event: musicNftAbi.find(item => item.type === 'event' && item.name === 'TrackMinted'), // Provide ABI for the event
+          // topics: [encodeEventTopics({ abi: musicNftAbi, eventName: 'TrackMinted' })[0]], // Optional: More specific topic filtering
+          fromBlock: fromBlock,
+          toBlock: 'latest',
+        });
+
+        // Sort logs by block number and log index to get the most recent ones first
+        const sortedLogs = logs.sort((a, b) => {
+            if (b.blockNumber === a.blockNumber) {
+                return Number(b.logIndex) - Number(a.logIndex);
+            }
+            return Number(b.blockNumber) - Number(a.blockNumber);
+        });
+
+        const recentTrackData: AppNftItem[] = [];
+        for (const log of sortedLogs.slice(0, count)) {
+          // Decode the event to get tokenURI and tokenId
+          // Assuming TrackMinted event is: event TrackMinted(uint256 indexed tokenId, address indexed artist, string uri);
+          // The actual parsing depends on how viem/ethers decodes event logs from getLogs result.
+          // For viem, `decodeEventLog` can be used if topics/data are structured for it.
+          // Here, we'll manually assume structure or use a simpler parse if possible.
+          // This part might need adjustment based on the exact structure of `log.args` from `getLogs`
+          // For now, let's assume log.args contains { tokenId, artist, uri } or similar.
+          // This will likely need `decodeEventLog` from viem for proper parsing.
+
+          // Placeholder for actual event decoding - THIS WILL LIKELY FAIL WITHOUT PROPER DECODING
+          // const { tokenId, artist, uri } = log.args as any; // EXAMPLE - Needs proper decoding
+          // For now, we can't easily decode without `decodeEventLog` and full ABI parsing here.
+          // Let's skip fetching IPFS metadata for now and just return placeholders
+          // to get the structure right, then refine IPFS fetching.
+
+          // This is a simplified placeholder. Actual IPFS fetching and metadata parsing is complex.
+          // We'll need to fetch `tokenURI` from the event, then fetch JSON from IPFS, then parse it.
+          // For now, let's assume we can get some basic info.
+          // This part needs to be robustly implemented.
+
+          // TODO: Implement proper event decoding and IPFS metadata fetching for each track.
+          // For now, creating dummy items based on what we might get.
+          // This will be non-functional for IPFS data until proper decoding and fetching logic is added.
+
+          // This is a very simplified placeholder and needs full implementation
+          // of event decoding and IPFS fetching.
+          // const tokenIdFromEvent = (log.topics[1] ? BigInt(log.topics[1]).toString() : "unknown"); // Example if tokenId is indexed
+          // const tokenUriFromEvent = "ipfs://placeholder"; // Need to get from event data
+
+          // For now, this hook will return an empty array until proper event parsing and IPFS fetching is implemented.
+          // This is a complex step.
+        }
+
+        // console.log("Fetched recent track logs (unparsed):", sortedLogs.slice(0, count));
+        // Actual implementation of fetching metadata for each URI would go here.
+        // For now, returning an empty array as the parsing is complex and not done yet.
+        if (sortedLogs.length > 0) {
+            // This is a placeholder. The actual implementation would involve:
+            // 1. Decoding each log to get the tokenURI.
+            // 2. Fetching the JSON from IPFS using the tokenURI.
+            // 3. Parsing the JSON to extract metadata (name, image, artist).
+            // 4. Formatting it into AppNftItem.
+            // This is non-trivial. For now, I'll log a warning.
+            console.warn("useRecentTracks: Event log parsing and IPFS metadata fetching not fully implemented yet.");
+        }
+
+        return []; // Placeholder: return empty until full logic is built
+
+      } catch (e) {
+        console.error("Error fetching recent tracks:", e);
+        throw e;
+      }
+    },
+    enabled: !!publicClient && !!musicNftContractAddress,
+    staleTime: 1000 * 60 * 2, // 2 minutes for recent tracks
+  });
+}
+
+// Need to import usePublicClient from wagmi
+// import { usePublicClient } from 'wagmi'; // Add this to imports at the top of the file

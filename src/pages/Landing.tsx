@@ -3,34 +3,37 @@ import { Button } from "@/components/ui/button";
 import { Play, Sun, Moon, TrendingUp, ArrowRight, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { WalletConnection } from "@/components/WalletConnection";
+// import { WalletConnection } from "@/components/WalletConnection"; // Old button removed
+import { ConnectButton } from '@reown/appkit/react'; // Assuming AppKit provides a button
 import { useAudio } from "@/contexts/AudioContext";
+import { useRecentTracks, AppNftItem } from "@/hooks/contracts"; // Import the new hook and type
 
-const trendingTracks = [
-  {
-    id: "1",
-    title: "Cosmic Drift",
-    artist: "NebulaBeats",
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
-    duration: "3:42",
-  },
-  {
-    id: "2",
-    title: "Digital Soul",
-    artist: "CryptoHarmony", 
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
-    duration: "4:18",
-  },
-  {
-    id: "3",
-    title: "Ethereal Dreams",
-    artist: "QuantumBeats",
-    image: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=300&h=300&fit=crop",
-    duration: "5:23",
-  },
-];
+// const trendingTracks = [ // Static mock data removed
+//   {
+//     id: "1",
+//     title: "Cosmic Drift",
+//     artist: "NebulaBeats",
+//     image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
+//     duration: "3:42",
+//   },
+//   {
+//     id: "2",
+//     title: "Digital Soul",
+//     artist: "CryptoHarmony",
+//     image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
+//     duration: "4:18",
+//   },
+//   {
+//     id: "3",
+//     title: "Ethereal Dreams",
+//     artist: "QuantumBeats",
+//     image: "https://images.unsplash.com/photo-1471478331149-c72f17e33c73?w=300&h=300&fit=crop",
+//     duration: "5:23",
+//   },
+// ];
 
 export default function Landing() {
+  const { data: recentTracks, isLoading: isLoadingRecentTracks, error: recentTracksError } = useRecentTracks(3); // Fetch 3 recent tracks
   // State for dark mode, defaulting to system preference or true (dark)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -91,7 +94,7 @@ export default function Landing() {
           >
             {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-          <WalletConnection />
+          <ConnectButton />
         </div>
       </header>
 
@@ -155,33 +158,60 @@ export default function Landing() {
 
           {/* Grid: 1 col mobile, md:2 cols, lg:3 cols for cards. Gap adjusted. */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {trendingTracks.map((track, index) => (
+            {isLoadingRecentTracks && (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="glass-card p-4 sm:p-6 rounded-2xl animate-pulse">
+                  <div className="relative mb-4">
+                    <div className="w-full aspect-square bg-white/10 rounded-xl"></div>
+                  </div>
+                  <div className="h-6 bg-white/10 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-white/10 rounded w-1/2 mb-2"></div>
+                  <div className="h-4 bg-white/10 rounded w-1/4"></div>
+                </div>
+              ))
+            )}
+            {recentTracksError && (
+              <div className="col-span-full text-center text-red-500">
+                <p>Error loading trending tracks: {recentTracksError.message}</p>
+              </div>
+            )}
+            {!isLoadingRecentTracks && !recentTracksError && (!recentTracks || recentTracks.length === 0) && (
+              <div className="col-span-full text-center text-dt-gray-light">
+                <p>No recent tracks to display. Mint some new music!</p>
+              </div>
+            )}
+            {!isLoadingRecentTracks && !recentTracksError && recentTracks && recentTracks.map((track: AppNftItem, index: number) => (
+              // TODO: The useRecentTracks hook currently returns dummy data.
+              // This mapping will need to be adjusted once real data (name, artist, image, duration) is populated.
+              // For now, using AppNftItem fields and placeholders.
               <div 
-                key={track.id} 
+                key={track.id || index} // Use track.id if available, otherwise index
                 className={`glass-card p-4 sm:p-6 rounded-2xl hover:bg-dt-primary/20 transition-all duration-300 group hover:scale-[1.02] cursor-pointer ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
                 style={{ transitionDelay: `${1200 + index * 200}ms` }}
+                // onClick={() => navigate(`/track/${track.id}`)} // Optional: navigate to track details
               >
                 <div className="relative mb-4">
                   <img
-                    src={track.image}
-                    alt={track.title}
+                    src={track.imageUrl || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop"} // Fallback image
+                    alt={track.name || "Track"}
                     className="w-full aspect-square object-cover rounded-xl"
                   />
                   <Button
-                    onClick={() => handlePlayPreview(track)}
+                    onClick={(e) => { e.stopPropagation(); handlePlayPreview({ id: track.id, title: track.name, artist: track.collectionName, image: track.imageUrl, audioUrl: track.audioUrl }); }}
                     className="absolute inset-0 m-auto w-16 h-16 bg-white/90 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
                   >
                     <Play className="h-6 w-6 text-black ml-1" />
                   </Button>
                 </div>
                 
-                <h3 className="font-satoshi font-semibold text-lg mb-1 group-hover:text-dt-primary transition-colors">
-                  {track.title}
+                <h3 className="font-satoshi font-semibold text-lg mb-1 group-hover:text-dt-primary transition-colors truncate" title={track.name}>
+                  {track.name || "Untitled Track"}
                 </h3>
-                <p className="text-dt-gray-light mb-2 group-hover:text-white transition-colors">
-                  {track.artist}
+                <p className="text-dt-gray-light mb-2 group-hover:text-white transition-colors truncate" title={track.collectionName}>
+                  {track.collectionName || "Unknown Artist"}
                 </p>
-                <span className="text-sm text-dt-gray-light">{track.duration}</span>
+                {/* Duration is not directly available in AppNftItem from Alchemy unless parsed from metadata */}
+                <span className="text-sm text-dt-gray-light">{"--:--"}</span>
               </div>
             ))}
           </div>
@@ -195,7 +225,7 @@ export default function Landing() {
           <p className="text-lg sm:text-xl text-dt-gray-light mb-8">
             Connect your wallet and start collecting exclusive tracks from independent artists worldwide.
           </p>
-          <WalletConnection />
+          <ConnectButton />
         </div>
       </section>
     </div>
