@@ -17,8 +17,9 @@ import {
     useDelistTrack,
     useBuyTrack,
 } from "@/hooks/contracts"; // Import the custom hook
+import { useBuyNft } from '@/hooks/useBuyNft'; // Import the new hook
 import { Input } from "@/components/ui/input"; // For price input
-import { Tag, ShoppingCart, ListX } from "lucide-react"; // Icons for new buttons
+import { Tag, ShoppingCart, ListX, ShieldCheck } from "lucide-react"; // Icons for new buttons, added ShieldCheck
 
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
@@ -26,7 +27,7 @@ import musicNftAbi from "@/lib/abi/MusicNFT.json";
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
-// TrackSaleV2 address is already available in the hooks themselves
+const trackSaleV2Address = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Added TrackSaleV2 address
 
 interface NftMetadata {
   name?: string;
@@ -93,11 +94,55 @@ export default function TrackDetails() {
 
   // Hooks for TrackSaleV2 interactions
   const { data: listingPriceWei, isLoading: isLoadingListing, refetch: refetchListing } = useGetListing(tokenId?.toString());
-  const { listTrack, isListPending, isConfirmingList, listError, isListConfirmed } = useListTrackForSale();
+  const { listTrack, currentStep: listTrackStep, isListPending, isConfirmingList, listError, isListConfirmed, resetState: resetListTrackState } = useListTrackForSale(); // Added listTrackStep and reset
   const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
   const { buyTrack: buyListedTrack, isBuyPending: isBuyListedPending, isConfirmingBuy: isConfirmingBuyListed, buyError: buyListedError, isBuyConfirmed: isBuyListedConfirmed, buyHash: buyListedHash } = useBuyTrack();
 
-  const isProcessingMarketTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyListedPending || isConfirmingBuyListed;
+
+  // Instantiate useBuyNft hook
+  const {
+    isSellerApproved,
+    isLoadingSellerApprovalStatus,
+    approveSaleContract,
+    isLoadingApprovalAction,
+    isConfirmedApprovalAction, // To know when approval is done
+    approvalError, // To display approval errors
+    refetchSellerApproval,
+  } = useBuyNft({
+    tokenId: tokenId,
+    sellerAddress: nftContractData?.owner,
+    trackSaleV2Address: trackSaleV2Address,
+    musicNftAddress: musicNftContractAddress,
+  });
+
+  const isProcessingMarketTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyListedPending || isConfirmingBuyListed || isLoadingApprovalAction;
+
+  // Refetch seller approval status when an approval action is confirmed or when listing/delisting happens
+  useEffect(() => {
+    if (isConfirmedApprovalAction || isListConfirmed || isDelistConfirmed) {
+      refetchSellerApproval();
+      refetchListing(); // Also refetch listing details as it might have changed
+    }
+  }, [isConfirmedApprovalAction, isListConfirmed, isDelistConfirmed, refetchSellerApproval, refetchListing]);
+
+  // Display toast for approval errors
+  useEffect(() => {
+    if (approvalError) {
+      toast({ title: "Approval Failed", description: approvalError.message, variant: "destructive" });
+    }
+  }, [approvalError, toast]);
+
+  // Reset list track state if an error occurred during approval that useListTrackForSale might not be aware of
+  useEffect(() => {
+    if (listTrackStep === "error" && approvalError) {
+        // If useListTrackForSale errored and we also have an approvalError from useBuyNft,
+        // it's possible the listTrack's internal state needs a reset if it was waiting for an approval
+        // that useBuyNft was handling. This is a bit complex due to two hooks managing approvals.
+        // For now, direct approval errors are handled by useBuyNft's toasts.
+        // useListTrackForSale handles its own errors.
+    }
+  }, [listTrackStep, approvalError, resetListTrackState])
+
 
   // 1. Fetch Token URI
   const { data: tokenUriData, isLoading: isTokenUriLoading, error: tokenUriError } = useReadContract({
@@ -447,11 +492,29 @@ export default function TrackDetails() {
 
               {/* Action Buttons Section */}
               <div className="mt-6 space-y-3">
-                {isOwnedByCurrentUser && !isForSecondarySale && !showPriceInput && (
+                {isLoadingSellerApprovalStatus && isOwnedByCurrentUser && (
+                  <div className="flex items-center justify-center text-dt-gray-light">
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    <span>Checking approval status...</span>
+                  </div>
+                )}
+
+                {!isLoadingSellerApprovalStatus && isOwnedByCurrentUser && !isSellerApproved && (
+                  <Button
+                    className="w-full btn-accent text-base sm:text-lg py-3"
+                    onClick={approveSaleContract}
+                    disabled={isLoadingApprovalAction || isProcessingMarketTx}
+                  >
+                    {isLoadingApprovalAction ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShieldCheck className="h-5 w-5 mr-2" />}
+                    {isLoadingApprovalAction ? "Approving..." : "Approve Sale Contract"}
+                  </Button>
+                )}
+
+                {isOwnedByCurrentUser && isSellerApproved && !isForSecondarySale && !showPriceInput && (
                   <Button
                     className="w-full btn-secondary text-base sm:text-lg py-3"
                     onClick={() => setShowPriceInput(true)}
-                    disabled={isProcessingMarketTx || isLoadingListing}
+                    disabled={isProcessingMarketTx || isLoadingListing || isLoadingApprovalAction}
                   >
                     {isLoadingListing && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
                     {!isLoadingListing && <Tag className="h-5 w-5 mr-2" />}
@@ -459,7 +522,7 @@ export default function TrackDetails() {
                   </Button>
                 )}
 
-                {isOwnedByCurrentUser && showPriceInput && (
+                {isOwnedByCurrentUser && isSellerApproved && showPriceInput && (
                   <div className="space-y-2">
                     <Input
                       type="number"
@@ -467,20 +530,25 @@ export default function TrackDetails() {
                       value={listPriceEth}
                       onChange={(e) => setListPriceEth(e.target.value)}
                       className="bg-white/10 border-white/20"
-                      disabled={isProcessingMarketTx}
+                      disabled={isProcessingMarketTx || isLoadingApprovalAction}
                     />
                     <div className="flex space-x-2">
                       <Button
                         className="flex-1 btn-primary"
                         onClick={handleListTrackForSale}
-                        disabled={isProcessingMarketTx || !listPriceEth || parseFloat(listPriceEth) <= 0}
+                        disabled={isProcessingMarketTx || isLoadingApprovalAction || !listPriceEth || parseFloat(listPriceEth) <= 0}
                       >
-                        {isListPending || isConfirmingList ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : "Confirm Listing"}
+                        {(isListPending || isConfirmingList) && listTrackStep !== 'approving' && listTrackStep !== 'needsApproval' ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : "Confirm Listing"}
+                        {(listTrackStep === 'approving' || listTrackStep === 'needsApproval') && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+                        {listTrackStep === 'approving' && "Approving Token..."}
+                        {listTrackStep === 'listing' && (isListPending || isConfirmingList) && "Listing..."}
+                        {listTrackStep !== 'approving' && listTrackStep !== 'listing' && !(isListPending || isConfirmingList) && "Confirm Listing"}
+
                       </Button>
                       <Button
                         variant="ghost"
                         onClick={() => setShowPriceInput(false)}
-                        disabled={isProcessingMarketTx}
+                        disabled={isProcessingMarketTx || isLoadingApprovalAction}
                       >
                         Cancel
                       </Button>
@@ -492,7 +560,7 @@ export default function TrackDetails() {
                   <Button
                     className="w-full btn-outline border-red-500 text-red-500 hover:bg-red-500/10 text-base sm:text-lg py-3"
                     onClick={handleDelistListedTrack}
-                    disabled={isProcessingMarketTx}
+                    disabled={isProcessingMarketTx || isLoadingApprovalAction}
                   >
                     {isDelistPending || isConfirmingDelist ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ListX className="h-5 w-5 mr-2" />}
                     Delist Track
@@ -500,14 +568,21 @@ export default function TrackDetails() {
                 )}
 
                 {!isOwnedByCurrentUser && canBuySecondary && (
-                  <Button
-                    className="w-full btn-primary text-base sm:text-lg py-3"
-                    onClick={handleBuyListedTrack}
-                    disabled={isProcessingMarketTx || isLoadingListing}
-                  >
-                    {isBuyListedPending || isConfirmingBuyListed ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
-                    {`Buy for ${secondaryMarketPriceEth} ETH`}
-                  </Button>
+                  <>
+                    {!isSellerApproved && !isLoadingSellerApprovalStatus && (
+                      <p className="text-sm text-center text-yellow-500">
+                        The seller needs to approve this contract for sales before you can buy.
+                      </p>
+                    )}
+                    <Button
+                      className="w-full btn-primary text-base sm:text-lg py-3"
+                      onClick={handleBuyListedTrack}
+                      disabled={!isSellerApproved || isProcessingMarketTx || isLoadingListing || isLoadingSellerApprovalStatus}
+                    >
+                      {isBuyListedPending || isConfirmingBuyListed ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
+                      {`Buy for ${secondaryMarketPriceEth} ETH`}
+                    </Button>
+                  </>
                 )}
 
                 {/* Fallback to primary market buy if not listed on secondary and available */}
