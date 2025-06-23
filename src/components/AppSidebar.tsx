@@ -1,5 +1,6 @@
 
-import { Home, Music, Users, Upload, Wallet, Settings, TrendingUp } from "lucide-react";
+import { Home, Music, Users, Upload, Wallet, Settings, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import { useAccount } from "wagmi"; // Import useAccount
 import {
   Sidebar,
   SidebarContent,
@@ -56,6 +57,36 @@ const bottomItems = [
 ];
 
 export function AppSidebar() {
+  const { address, isConnected, connector } = useAccount();
+
+  // Determine wallet display name or fallback
+  let walletDisplayName = "Wallet";
+  let WalletIcon = Wallet; // Default icon
+
+  if (isConnected && address) {
+    walletDisplayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    // Optionally, use a different icon or add a status indicator
+    // For example, if you want to show connector icon, that's more complex
+    // For now, just changing text and maybe a generic connected icon
+    WalletIcon = CheckCircle; // Or keep Wallet icon and add a green dot
+  } else {
+    WalletIcon = XCircle; // Or keep Wallet and add a red dot / use default
+  }
+
+  // Update bottomItems for Wallet dynamically
+  const dynamicBottomItems = bottomItems.map(item => {
+    if (item.title === "Wallet") {
+      return {
+        ...item,
+        // title: walletDisplayName, // This changes the main text
+        // We want to display the address next to or below "Wallet" or change the icon
+        // Let's adjust how it's rendered directly in the map function below
+      };
+    }
+    return item;
+  });
+
+
   return (
     <Sidebar className="border-r border-white/10 bg-gradient-dark">
       <SidebarHeader className="p-4 lg:p-6"> {/* Adjusted padding for mobile-first */}
@@ -97,15 +128,58 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {bottomItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
-                asChild 
-                className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
-              >
-                <Link to={item.url} className="flex items-center space-x-3 px-4"> {/* Use Link and to */}
-                  <item.icon className="h-5 w-5" />
-                  <span className="font-medium">{item.title}</span>
+          {dynamicBottomItems.map((item) => {
+            if (item.title === "Wallet") {
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
+                  >
+                    <Link to={item.url} className="flex items-center space-x-3 px-4">
+                      <WalletIcon className={`h-5 w-5 ${isConnected ? 'text-green-400' : 'text-red-400'}`} />
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{item.title}</span>
+                        {isConnected && address && (
+                          <span className="text-xs text-dt-gray-light -mt-1">
+                            {`${address.slice(0, 6)}...${address.slice(-4)}`}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            }
+            // Render other bottom items normally
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
+                >
+                  <Link to={item.url} className="flex items-center space-x-3 px-4">
+                    <item.icon className="h-5 w-5" />
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+
+        <div className="mt-6 p-4 glass-card rounded-xl">
+          <p className="text-dt-gray-light text-sm mb-2">Pro Membership</p>
+          <div className="flex items-center justify-between">
+            <span className="text-white font-medium">Upgrade</span>
+            <button className="bg-dt-primary text-white px-3 py-1 rounded-lg text-sm hover:bg-dt-primary-dark transition-colors">
+              Get Pro
+            </button>
+          </div>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
