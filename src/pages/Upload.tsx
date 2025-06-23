@@ -195,23 +195,16 @@ export default function Upload() {
         }
       }
 
-      if (newTrackId) {
-        toast.success(
-          `${formData.title} minted successfully! Token ID: ${newTrackId}. Tx: ${mintHash}`,
-          { duration: 7000 }
-        );
-        navigate(`/track/${newTrackId}`);
-      } else {
-        // Fallback if event parsing fails or tokenId not found
-        toast.success(
-          `${formData.title} minted successfully! Tx: ${mintHash}. Could not determine new Token ID from events.`,
-          { duration: 7000 }
-        );
-        navigate('/profile'); // Fallback to profile
-      }
+      // Simplified: Show generic success and always navigate to profile
+      toast.success(
+        `${formData.title} minted successfully! Transaction: ${mintHash}`,
+        { duration: 7000 }
+      );
+      navigate('/profile');
     } else if (mintError || confirmationError) { // Handle errors only if not confirmed
+      // Ensure toast is only shown if there's an actual error and not just pending/idle states
       toast({
-        title: "Transaction Failed",
+        title: "Minting Transaction Failed",
         description: (mintError?.message || confirmationError?.message) ?? "An error occurred during minting.",
         variant: "destructive",
       });
