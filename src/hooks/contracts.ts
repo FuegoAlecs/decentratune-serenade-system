@@ -267,6 +267,8 @@ export function useListTrackForSale() {
     const [operationError, setOperationError] = useState<Error | null>(null);
     const [approvalHash, setApprovalHash] = useState<Address | undefined>(undefined);
     const [listingHash, setListingHash] = useState<Address | undefined>(undefined);
+    // State to store details for the listing step if approval is required first
+    const [pendingListingDetails, setPendingListingDetails] = useState<{ tokenId: bigint, priceWei: bigint } | null>(null);
 
     // Wagmi hook for MusicNFT.approve()
     const {
@@ -304,6 +306,7 @@ export function useListTrackForSale() {
         resetSetPrice();
         setApprovalHash(undefined);
         setListingHash(undefined);
+        setPendingListingDetails(null); // Clear any pending details
 
         if (!trackSaleV2ContractAddress) {
             console.error("TrackSaleV2 contract address not configured.");
@@ -330,33 +333,34 @@ export function useListTrackForSale() {
             return;
         }
 
-        let priceWei: bigint;
+        let localPriceWei: bigint;
         try {
-            priceWei = parseEther(priceEth);
+            localPriceWei = parseEther(priceEth);
         } catch (e) {
             console.error("Invalid price:", priceEth, e);
             setOperationError(new Error("Invalid price format."));
             setCurrentStep("error");
             return;
         }
-        if (priceWei <= BigInt(0)) {
+        if (localPriceWei <= BigInt(0)) {
             console.error("Price must be positive.");
             setOperationError(new Error("Price must be positive."));
             setCurrentStep("error");
             return;
         }
 
-        const tokenIdBigInt = BigInt(tokenId);
+        const localTokenIdBigInt = BigInt(tokenId);
+        // Store details for potential use after approval
+        setPendingListingDetails({ tokenId: localTokenIdBigInt, priceWei: localPriceWei });
 
         try {
-            // 1. Check current approval
             setCurrentStep("checkingApproval");
             console.log(`Checking approval for token ID: ${tokenId} to spender: ${trackSaleV2ContractAddress}`);
             const approvedAddress = await publicClient.readContract({
                 address: musicNftContractAddress,
                 abi: musicNftAbi,
                 functionName: 'getApproved',
-                args: [tokenIdBigInt],
+                args: [localTokenIdBigInt],
             });
             console.log(`Current approved address for token ${tokenId}: ${approvedAddress}`);
 
@@ -370,68 +374,75 @@ export function useListTrackForSale() {
                     address: musicNftContractAddress,
                     abi: musicNftAbi,
                     functionName: 'approve',
-                    args: [trackSaleV2ContractAddress, tokenIdBigInt],
+                    args: [trackSaleV2ContractAddress, localTokenIdBigInt],
                 });
                 setApprovalHash(approveTxHash);
-                setCurrentStep("approving"); // Now waiting for approval confirmation via useWaitForTransactionReceipt
+                setCurrentStep("approving");
                 console.log(`Approval transaction sent: ${approveTxHash}. Waiting for confirmation...`);
-                // The useEffect below or a direct wait here will handle the next step
-                return; // Wait for approval confirmation effect to proceed
+                // Return here; the useEffect watching isApproveConfirmed will handle the next step.
+                return;
             }
 
-            // 2. If already approved or approval succeeded (handled by effect), proceed to list
+            // If already approved, proceed directly to listing
+            await _proceedToListing(localTokenIdBigInt, localPriceWei);
+
+        } catch (err: any) {
+            console.error("Error during listing initiation or approval check:", err);
+            setOperationError(err);
+            setCurrentStep("error");
+            setPendingListingDetails(null); // Clear pending details on error
+        }
+    };
+
+    // Internal function to handle the actual listing call
+    const _proceedToListing = async (tokenIdToProcess: bigint, priceWeiToProcess: bigint) => {
+        try {
             setCurrentStep("listing");
-            console.log(`Token ${tokenId} is approved. Proceeding to list for ${priceEth} ETH.`);
+            console.log(`Proceeding to list token ${tokenIdToProcess.toString()} for ${priceWeiToProcess.toString()} wei.`);
 
             const listTxHash = await setTrackPriceOnSaleContract({
                 address: trackSaleV2ContractAddress,
                 abi: trackSaleV2Abi,
                 functionName: 'setTrackPrice',
-                args: [tokenIdBigInt, priceWei],
+                args: [tokenIdToProcess, priceWeiToProcess],
             });
             setListingHash(listTxHash);
-            // setCurrentStep("success") will be set by the effect watching isListingConfirmed
             console.log(`Set track price transaction sent: ${listTxHash}. Waiting for confirmation...`);
-
         } catch (err: any) {
-            console.error("Error during listing process:", err);
+            console.error("Error during setTrackPrice call:", err);
             setOperationError(err);
             setCurrentStep("error");
+        } finally {
+            setPendingListingDetails(null); // Clear pending details after attempting to list
         }
     };
 
-    // Effect to proceed after approval confirmation
+    // Effect to proceed automatically after approval confirmation
     useEffect(() => {
-        if (currentStep === 'approving' && isApproveConfirmed) {
-            if (approveReceipt) { // Explicitly check if approveReceipt is defined
+        if (currentStep === 'approving' && isApproveConfirmed && pendingListingDetails) {
+            if (approveReceipt) {
                 if (approveReceipt.status === 'success') {
-                    console.log('Approval confirmed. UI should now enable proceeding to listing, or listTrack can be called again.');
-                    // For now, setting step to 'listing' which implies the next call to listTrack will proceed.
-                    // A more sophisticated state machine or callback could make this smoother.
-                    // Ideally, the original tokenId and priceEth are stored in state to be used here
-                    // to automatically call the setTrackPriceOnSaleContract part.
-                    // This is a placeholder for that more advanced logic.
-                    // If the UI is designed to call listTrack() again after seeing isApproveConfirmed,
-                    // then this step simply signals the approval is done.
-                    setCurrentStep("listing"); // Or a new state like "approved_ready_to_list"
+                    console.log('Approval confirmed. Automatically proceeding to list.');
+                    _proceedToListing(pendingListingDetails.tokenId, pendingListingDetails.priceWei);
                 } else {
                      console.error("Approval transaction reverted on-chain.");
                      setOperationError(new Error("NFT Approval transaction failed (reverted)."));
                      setCurrentStep("error");
+                     setPendingListingDetails(null);
                 }
             } else {
-                // This case should ideally not be reached if isApproveConfirmed is true.
-                // It suggests an issue with wagmi's hook state or an unexpected sequence.
-                console.error("useListTrackForSale: approveReceipt is undefined even though isApproveConfirmed is true. This is an unexpected state.");
+                console.error("useListTrackForSale: approveReceipt is undefined even though isApproveConfirmed is true.");
                 setOperationError(new Error("Approval data missing despite confirmation. Please retry."));
                 setCurrentStep("error");
+                setPendingListingDetails(null);
             }
         } else if (currentStep === 'approving' && approveConfirmationError) {
             console.error("Approval confirmation error (useWaitForTransactionReceipt):", approveConfirmationError);
             setOperationError(new Error(`Approval failed: ${approveConfirmationError.message}`));
             setCurrentStep("error");
+            setPendingListingDetails(null);
         }
-    }, [isApproveConfirmed, approveConfirmationError, approveReceipt, currentStep]); // Ensure all dependencies are listed
+    }, [isApproveConfirmed, approveConfirmationError, approveReceipt, currentStep, pendingListingDetails]);
 
     useEffect(() => {
         if (currentStep === 'listing' && isListingConfirmed && listingReceipt) {
