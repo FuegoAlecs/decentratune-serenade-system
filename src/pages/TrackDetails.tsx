@@ -4,7 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider"; // Assuming this is for playback, will keep for now
 import { Play, Pause, Heart, Share2, ArrowLeft, Coins, Loader2 } from "lucide-react";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"; // Keep useWriteContract for buyNftWrite
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi"; // Keep useWriteContract for buyNftWrite, Added usePublicClient
 import { useQuery } from '@tanstack/react-query';
 // import { parseEther, formatEther, Address } from "ethers"; // formatEther and Address still needed, parseEther might be in useTipArtist
 import { formatEther, Address } from "ethers"; // parseEther is in the hook
@@ -62,6 +62,7 @@ export default function TrackDetails() {
   const tokenId = tokenIdStr ? BigInt(tokenIdStr) : undefined;
   const { address: userAddress, isConnected } = useAccount();
   const { toast } = useToast();
+  const publicClient = usePublicClient();
 
   // const [nftMetadata, setNftMetadata] = useState<NftMetadata | null>(null); // Replaced by useQuery
   const [nftContractData, setNftContractData] = useState<NftDetailsContractData | null>(null);
@@ -259,55 +260,60 @@ export default function TrackDetails() {
     setIsVerifyingBuyEligibility(true);
     toast({ title: "Verifying Purchase", description: "Checking latest seller status..." });
 
-    try {
-      // Step 1: Refetch contract details to get the latest owner
-      const freshContractDetails = await refetchContractDetails();
-      if (freshContractDetails.error || !freshContractDetails.data) {
-        throw new Error("Failed to fetch latest NFT details. Please try again.");
-      }
-      const currentOwner = (freshContractDetails.data as NftDetailsContractData).owner;
-
-      // Step 2: Refetch seller approval status for the (potentially new) owner
-      // useBuyNft hook will use the latest nftContractData.owner due to component re-render or direct dependency
-      // We need to ensure useBuyNft re-evaluates with the new owner if it changed
-      // The `sellerAddress` prop to useBuyNft is `nftContractData?.owner`.
-      // When `nftContractData` is updated by `setNftContractData` (from `freshContractDetails`),
-      // `useBuyNft` should see the new `sellerAddress`. Then `refetchSellerApproval` will use it.
-
-      // It might be safer to pass the new owner directly if possible, or ensure useBuyNft has re-rendered.
-      // For now, relying on the useEffect dependency chain and re-render of useBuyNft.
-      // Let's ensure nftContractData is set, then call refetchSellerApproval.
-      setNftContractData(freshContractDetails.data as NftDetailsContractData); // This will trigger re-render of useBuyNft
-
-      // Give a brief moment for state to propagate and useBuyNft to pick up new sellerAddress if it changed.
-      // This is a bit of a hack; a more robust way would be to chain these effects or use a callback.
-      // Consider making refetchSellerApproval accept an owner override if this isn't reliable.
-      setTimeout(async () => {
-        const freshApprovalStatus = await refetchSellerApproval();
-        if (freshApprovalStatus.error || typeof freshApprovalStatus.data !== 'boolean') {
-          throw new Error("Failed to verify seller approval status. Please try again.");
-        }
-
-        if (freshApprovalStatus.data === true) { // isSellerApproved is true
-          toast({ title: "Verification Successful", description: "Proceeding with purchase." });
-          await buyListedTrack(tokenId.toString(), listingPriceWei);
-        } else {
-          toast({
-            title: "Purchase Blocked",
-            description: "Seller approval missing or owner has changed. Please refresh and try again if the item is still available and approved.",
-            variant: "destructive",
-          });
-        }
+    if (!publicClient || !musicNftContractAddress || !tokenId) {
+        toast({ title: "Verification Error", description: "Client or contract details missing.", variant: "destructive" });
         setIsVerifyingBuyEligibility(false);
-      }, 100); // Small delay for state update
+        return;
+    }
 
+    try {
+      // Step 1: Directly read the current owner of the tokenId
+      const latestOwner = await publicClient.readContract({
+        address: musicNftContractAddress,
+        abi: musicNftAbi.abi,
+        functionName: 'ownerOf',
+        args: [tokenId],
+      }) as Address;
+
+      if (!latestOwner) {
+        throw new Error("Could not determine NFT owner.");
+      }
+
+      // Update the local state for nftContractData's owner, which might update other UI elements.
+      // This won't directly impact the next check as we use latestOwner, but good for UI consistency.
+      setNftContractData(prev => prev ? { ...prev, owner: latestOwner } : null);
+
+      // Step 2: Directly read isApprovedForAll status for this latestOwner and trackSaleV2Address
+      const isLatestApproved = await publicClient.readContract({
+        address: musicNftContractAddress,
+        abi: musicNftAbi.abi,
+        functionName: 'isApprovedForAll',
+        args: [latestOwner, trackSaleV2Address],
+      }) as boolean;
+
+      if (isLatestApproved) {
+        toast({ title: "Verification Successful", description: "Proceeding with purchase." });
+        await buyListedTrack(tokenId.toString(), listingPriceWei);
+      } else {
+        // Update the main approval status state from useBuyNft for UI consistency elsewhere if needed,
+        // though the immediate action is blocked here. This might involve calling refetchSellerApproval
+        // or manually setting a state if useBuyNft doesn't pick up the change fast enough for other UI parts.
+        // For now, just block the purchase.
+        refetchSellerApproval(); // Trigger a refresh of the hook's state for overall UI consistency.
+        toast({
+          title: "Purchase Blocked",
+          description: "Seller approval not found for the current owner. The owner may have changed or revoked approval.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
-      console.error("Error during pre-buy verification:", error);
+      console.error("Error during direct pre-buy verification:", error);
       toast({
         title: "Verification Failed",
         description: error.message || "Could not verify purchase eligibility.",
         variant: "destructive",
       });
+    } finally {
       setIsVerifyingBuyEligibility(false);
     }
   };
