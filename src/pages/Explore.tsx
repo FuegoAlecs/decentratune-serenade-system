@@ -186,6 +186,7 @@ export default function Explore() {
                   title={nft.name || "Untitled Track"}
                   artist={nft.collectionName || "Unknown Artist"} // Or parse from metadata if available
                   image={nft.imageUrl || "/placeholder.svg"} // Provide a fallback placeholder
+                  audioUrl={nft.audioUrl} // Pass the audioUrl to TrackCard
                   // The following props were in mock but not directly in AppNftItem.
                   // TrackCard will need to handle their potential absence or they need to be fetched/derived.
                   // price={"N/A"} // Example: price would come from a marketplace
