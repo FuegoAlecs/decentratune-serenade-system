@@ -74,6 +74,7 @@ export default function TrackDetails() {
   const [tipAmount, setTipAmount] = useState("");
   const [showPriceInput, setShowPriceInput] = useState(false);
   const [listPriceEth, setListPriceEth] = useState("");
+  const [isVerifyingBuyEligibility, setIsVerifyingBuyEligibility] = useState(false);
 
 
   // Wagmi hooks for write operations
@@ -255,7 +256,60 @@ export default function TrackDetails() {
       toast({ title: "Connect Wallet", description: "Please connect your wallet to buy.", variant: "destructive" });
       return;
     }
-    await buyListedTrack(tokenId.toString(), listingPriceWei);
+    setIsVerifyingBuyEligibility(true);
+    toast({ title: "Verifying Purchase", description: "Checking latest seller status..." });
+
+    try {
+      // Step 1: Refetch contract details to get the latest owner
+      const freshContractDetails = await refetchContractDetails();
+      if (freshContractDetails.error || !freshContractDetails.data) {
+        throw new Error("Failed to fetch latest NFT details. Please try again.");
+      }
+      const currentOwner = (freshContractDetails.data as NftDetailsContractData).owner;
+
+      // Step 2: Refetch seller approval status for the (potentially new) owner
+      // useBuyNft hook will use the latest nftContractData.owner due to component re-render or direct dependency
+      // We need to ensure useBuyNft re-evaluates with the new owner if it changed
+      // The `sellerAddress` prop to useBuyNft is `nftContractData?.owner`.
+      // When `nftContractData` is updated by `setNftContractData` (from `freshContractDetails`),
+      // `useBuyNft` should see the new `sellerAddress`. Then `refetchSellerApproval` will use it.
+
+      // It might be safer to pass the new owner directly if possible, or ensure useBuyNft has re-rendered.
+      // For now, relying on the useEffect dependency chain and re-render of useBuyNft.
+      // Let's ensure nftContractData is set, then call refetchSellerApproval.
+      setNftContractData(freshContractDetails.data as NftDetailsContractData); // This will trigger re-render of useBuyNft
+
+      // Give a brief moment for state to propagate and useBuyNft to pick up new sellerAddress if it changed.
+      // This is a bit of a hack; a more robust way would be to chain these effects or use a callback.
+      // Consider making refetchSellerApproval accept an owner override if this isn't reliable.
+      setTimeout(async () => {
+        const freshApprovalStatus = await refetchSellerApproval();
+        if (freshApprovalStatus.error || typeof freshApprovalStatus.data !== 'boolean') {
+          throw new Error("Failed to verify seller approval status. Please try again.");
+        }
+
+        if (freshApprovalStatus.data === true) { // isSellerApproved is true
+          toast({ title: "Verification Successful", description: "Proceeding with purchase." });
+          await buyListedTrack(tokenId.toString(), listingPriceWei);
+        } else {
+          toast({
+            title: "Purchase Blocked",
+            description: "Seller approval missing or owner has changed. Please refresh and try again if the item is still available and approved.",
+            variant: "destructive",
+          });
+        }
+        setIsVerifyingBuyEligibility(false);
+      }, 100); // Small delay for state update
+
+    } catch (error: any) {
+      console.error("Error during pre-buy verification:", error);
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Could not verify purchase eligibility.",
+        variant: "destructive",
+      });
+      setIsVerifyingBuyEligibility(false);
+    }
   };
 
 
@@ -577,10 +631,14 @@ export default function TrackDetails() {
                     <Button
                       className="w-full btn-primary text-base sm:text-lg py-3"
                       onClick={handleBuyListedTrack}
-                      disabled={!isSellerApproved || isProcessingMarketTx || isLoadingListing || isLoadingSellerApprovalStatus}
+                      disabled={!isSellerApproved || isProcessingMarketTx || isLoadingListing || isLoadingSellerApprovalStatus || isVerifyingBuyEligibility}
                     >
-                      {isBuyListedPending || isConfirmingBuyListed ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
-                      {`Buy for ${secondaryMarketPriceEth} ETH`}
+                      {isVerifyingBuyEligibility && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+                      {isVerifyingBuyEligibility && "Verifying..."}
+                      {!isVerifyingBuyEligibility && (isBuyListedPending || isConfirmingBuyListed) && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+                      {!isVerifyingBuyEligibility && (isBuyListedPending || isConfirmingBuyListed) && "Purchasing..."}
+                      {!isVerifyingBuyEligibility && !(isBuyListedPending || isConfirmingBuyListed) && <ShoppingCart className="h-5 w-5 mr-2" />}
+                      {!isVerifyingBuyEligibility && !(isBuyListedPending || isConfirmingBuyListed) && `Buy for ${secondaryMarketPriceEth} ETH`}
                     </Button>
                   </>
                 )}
