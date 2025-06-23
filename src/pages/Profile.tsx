@@ -5,10 +5,11 @@ import { useQuery } from '@tanstack/react-query'; // Already here
 import { Button } from "@/components/ui/button";
 import { Wallet, Music, Upload, TrendingUp, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { useTracksOwned } from "@/hooks/contracts"; // Import the new hook
+import { useTracksOwned, AppNftItem } from "@/hooks/contracts"; // Import the new hook and AppNftItem
 import { formatEther, Address } from "ethers";
 import { useToast } from "@/hooks/use-toast";
 import { ipfsToHttp } from "@/lib/utils"; // Import the helper
+import { TrackCard } from "@/components/TrackCard"; // Import TrackCard
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
 import tipJarAbi from "@/lib/abi/TipJar.json";
@@ -96,22 +97,8 @@ export default function Profile() {
     error: ownedNftsError
   } = useTracksOwned(profileAddress);
 
-  // Ensure fetchedOwnedNfts is always an array for mapping, even if data is undefined initially
-  const ownedNftsToDisplay: OwnedNftItem[] = (fetchedOwnedNftsData || []).map(nft => ({
-    ...nft,
-    // Convert Alchemy's string ID to bigint if your OwnedNftItem expects bigint, or adjust OwnedNftItem
-    // For now, assuming AppNftItem in useTracksOwned returns an id that's compatible or doesn't need conversion here
-    // If AppNftItem.id is string (hex) and OwnedNftItem.id is bigint, conversion is needed.
-    // Let's assume AppNftItem from useTracksOwned already aligns with what OwnedNftItem needs or that OwnedNftItem's id can be string.
-    // For simplicity, I'll assume the 'id' from useTracksOwned (which is string from Alchemy) is used directly.
-    // If OwnedNftItem strictly needs bigint for `id`, this mapping needs adjustment.
-    id: typeof nft.id === 'string' && nft.id.startsWith('0x') ? BigInt(nft.id) : BigInt(0), // Example, needs robust parsing if mixed formats
-    image: nft.imageUrl, // Map from AppNftItem to OwnedNftItem fields
-    name: nft.name,
-    artist: nft.collectionName, // Or derive artist differently if needed
-    // price: nft.contractPrice, // If available from Alchemy or fetched separately
-  }));
-
+  // Use fetchedOwnedNftsData directly (it's AppNftItem[])
+  const ownedNftsToDisplay: AppNftItem[] = fetchedOwnedNftsData || [];
 
   useEffect(() => {
     if (ownedNftsError) {
@@ -361,19 +348,19 @@ export default function Profile() {
             <p className="text-center text-dt-gray-light py-10">No tracks owned yet.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {ownedNftsToDisplay.map((track) => (
-                // Assuming AppNftItem's id is string (from Alchemy). If OwnedNftItem expects bigint, ensure conversion.
-                <Link to={`/track/${track.id.toString()}`} key={track.id.toString()} className="glass-card p-4 rounded-2xl hover:bg-white/10 transition-all duration-300 block">
-                  <img src={track.image || "/placeholder.svg"} alt={track.name || "Track image"} className="w-full aspect-square object-cover rounded-xl mb-4 bg-white/5" />
-                  <h3 className="font-satoshi font-semibold mb-1 truncate" title={track.name}>{track.name || "Untitled Track"}</h3>
-                  <p className="text-dt-gray-light text-sm mb-2 truncate" title={track.artist}>
-                    {track.artist || "Unknown Artist"}
-                  </p>
-                  <div className="flex justify-between items-center text-xs text-dt-gray-light">
-                    {/* Displaying the token ID from Alchemy which might be hex or decimal string */}
-                    <span>ID: {track.id.length > 10 ? `${track.id.slice(0,4)}...${track.id.slice(-4)}` : track.id}</span>
-                  </div>
-                </Link>
+              {ownedNftsToDisplay.map((nft) => (
+                <TrackCard
+                  key={nft.id}
+                  id={nft.id} // Pass string ID from AppNftItem
+                  title={nft.name || "Untitled Track"}
+                  artist={nft.collectionName || "Unknown Artist"}
+                  image={nft.imageUrl || "/placeholder.svg"}
+                  audioUrl={nft.audioUrl} // Pass the audioUrl
+                  isNFT={true}
+                  isOwned={true} // These are owned tracks
+                  // Optional: Pass other relevant props if available and handled by TrackCard
+                  // duration={nft.rawMetadata?.duration || "0:00"} // Example if duration is in raw metadata
+                />
               ))}
             </div>
           )
