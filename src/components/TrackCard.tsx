@@ -1,48 +1,88 @@
-import { Play, Heart, MoreHorizontal, Coins, Download, Check } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Input } from "@/components/ui/input"; // For price input
+import { useState, useEffect } from "react";
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
+import { useAccount } from "wagmi";
+import { formatEther, parseEther } from "ethers"; // viem's formatEther, parseEther
+import {
+    useGetListing,
+    useListTrackForSale,
+    useDelistTrack,
+    useBuyTrack
+} from "@/hooks/contracts"; // Import the new hooks
+import { useToast } from "@/components/ui/use-toast"; // For notifications
 
 interface TrackCardProps {
-  id: string; // Token ID
+  id: string; // Token ID (tokenId)
   title: string;
-  artist: string;
+  artist: string; // Consider if this is the owner address or a display name
+  ownerAddress?: string; // Actual owner address of the NFT
   image?: string;
-  audioUrl?: string; // Added to receive the audio URL for playback
-  duration?: string; // Optional: metadata might not have it, player will determine
+  audioUrl?: string;
+  duration?: string;
   plays?: number;
   isNFT?: boolean;
-  isOwned?: boolean; // Important for deciding full vs preview play
-  price?: string;
-  mintStatus?: "Available" | "Limited" | "Sold Out";
+  // isOwned prop will be determined dynamically via ownerAddress and connected account
+  // price prop will be fetched dynamically via useGetListing
+  mintStatus?: "Available" | "Limited" | "Sold Out"; // This might relate to initial minting, not resale
 }
 
-export function TrackCard({ 
-  id, 
-  title, 
-  artist, 
-  image = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop", // Default image
+export function TrackCard({
+  id, // This is tokenId
+  title,
+  artist, // This is likely a display name, not owner address
+  ownerAddress, // Actual current owner of the NFT
+  image = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
   audioUrl,
-  duration = "0:00", // Default duration, actual will be determined by AudioContext
-  plays, 
-  isNFT, 
-  isOwned, 
-  price, 
-  mintStatus,
+  duration = "0:00",
+  plays,
+  isNFT,
+  mintStatus, // Keep for now, might be separate from resale status
 }: TrackCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const { playTrack, currentTrack, isPlaying, isLoading } = useAudio(); // Added isLoading
+  const [showConfetti, setShowConfetti] = useState(false); // Keep for other actions
+  const [showPriceInput, setShowPriceInput] = useState(false);
+  const [listPriceEth, setListPriceEth] = useState("");
+
+  const { playTrack, currentTrack, isPlaying, isLoading: isAudioLoading } = useAudio();
+  const { address: connectedAddress } = useAccount();
+  const { toast } = useToast();
+
+  // Determine if the connected user owns this track
+  const isOwned = !!connectedAddress && !!ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
+
+  // Fetch listing details
+  const { data: listingPriceWei, isLoading: isLoadingListing, refetch: refetchListing } = useGetListing(id);
+
+  // Contract interaction hooks
+  const { listTrack, isListPending, isConfirmingList, listError, isListConfirmed } = useListTrackForSale();
+  const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
+  const { buyTrack, isBuyPending, isConfirmingBuy, buyError, isBuyConfirmed } = useBuyTrack();
+
+  const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy;
+
+  useEffect(() => {
+    if (isListConfirmed || isDelistConfirmed || isBuyConfirmed) {
+      toast({ title: "Transaction Confirmed", description: "Your transaction has been confirmed." });
+      refetchListing(); // Refetch listing price after a successful transaction
+      // Potentially refetch owner data if a buy occurred, though this card doesn't fetch owner directly
+      // Parent component managing the list of tracks might need to refetch to update ownerAddress
+    }
+    if (listError) toast({ title: "Listing Error", description: listError.message, variant: "destructive" });
+    if (delistError) toast({ title: "Delisting Error", description: delistError.message, variant: "destructive" });
+    if (buyError) toast({ title: "Purchase Error", description: buyError.message, variant: "destructive" });
+  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError, toast, refetchListing]);
 
   const isCurrentTrackPlaying = currentTrack?.id === id && isPlaying;
-  const isCurrentTrackLoading = currentTrack?.id === id && isLoading; // Check if this specific track is loading
+  const isCurrentTrackLoading = currentTrack?.id === id && isAudioLoading; // Corrected: use isAudioLoading
 
   const handlePlay = () => {
     if (!audioUrl) {
       console.warn("No audio URL provided for track:", title);
-      // Optionally, inform the user via a toast or alert
+      toast({ title: "Playback Error", description: "No audio URL available for this track.", variant: "destructive" });
       return;
     }
     // Construct the Track object for AudioContext
@@ -79,8 +119,34 @@ export function TrackCard({
     setTimeout(() => setShowConfetti(false), 2000);
   };
 
+  const handleListTrack = async () => {
+    if (!listPriceEth || parseFloat(listPriceEth) <= 0) {
+      toast({ title: "Invalid Price", description: "Please enter a valid price greater than 0.", variant: "destructive" });
+      return;
+    }
+    // TODO: Add NFT approval check here before calling listTrack
+    // For now, assuming approval is granted.
+    // Example: const isApproved = await checkApproval(musicNftContractAddress, id, trackSaleV2Address);
+    // if (!isApproved) { /* request approval */ return; }
+    await listTrack(id, listPriceEth);
+    setShowPriceInput(false); // Hide input after attempting to list
+  };
+
+  const handleDelistTrack = async () => {
+    await delistTrack(id);
+  };
+
+  const handleBuyTrack = async () => {
+    if (!listingPriceWei) {
+      toast({ title: "Error", description: "Track is not listed for sale or price is unavailable.", variant: "destructive" });
+      return;
+    }
+    await buyTrack(id, listingPriceWei);
+  };
+
+
   return (
-    <div 
+    <div
       // Using the .track-card class defined in index.css for base styling (bg, border, shadow)
       // group class enables group-hover utilities for child elements
       // Added responsive padding here instead of in index.css's .track-card
@@ -202,12 +268,50 @@ export function TrackCard({
           <div className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm">
             <span className="text-light-text-secondary dark:text-dark-text-secondary">{duration}</span>
             {plays !== undefined && <span className="text-light-text-secondary dark:text-dark-text-secondary">{plays.toLocaleString()} plays</span>}
-            {price && <span className="text-light-accent-primary dark:text-dark-accent-primary font-semibold">{price}</span>}
+            {/* Display listing price */}
+            {isLoadingListing && <Loader2 className="h-4 w-4 animate-spin" />}
+            {!isLoadingListing && listingPriceWei && listingPriceWei > BigInt(0) && (
+              <span className="text-light-accent-primary dark:text-dark-accent-primary font-semibold">
+                {formatEther(listingPriceWei)} ETH
+              </span>
+            )}
           </div>
-          
-          <div className="flex items-center space-x-1 sm:space-x-2 self-end sm:self-center">
-            <Button
-              variant="ghost"
+
+          <div className="flex flex-col items-end space-y-2 mt-2 sm:mt-0">
+            {isNFT && showPriceInput && isOwned && (
+              <div className="flex items-center space-x-2 w-full">
+                <Input
+                  type="number"
+                  placeholder="Price (ETH)"
+                  value={listPriceEth}
+                  onChange={(e) => setListPriceEth(e.target.value)}
+                  className="h-8 text-xs sm:text-sm"
+                  disabled={isProcessingTx}
+                />
+                <Button
+                  size="sm"
+                  className="btn-primary text-xs sm:text-sm px-2 py-1"
+                  onClick={handleListTrack}
+                  disabled={isProcessingTx || !listPriceEth}
+                >
+                  {isListPending || isConfirmingList ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => setShowPriceInput(false)}
+                  disabled={isProcessingTx}
+                >
+                  <ListX className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-1 sm:space-x-2 self-end sm:self-center">
+              {/* Like Button remains */}
+              <Button
+                variant="ghost"
               size="icon" // Made it an icon button
               onClick={handleLike}
               className={`${liked ? 'text-red-500 scale-110' : 'text-light-text-secondary dark:text-dark-text-secondary'} hover:text-red-500 hover:scale-110 transition-all duration-200 p-1.5 sm:p-2`}
@@ -215,15 +319,55 @@ export function TrackCard({
             >
               <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
             </Button>
-            
-            {isNFT && !isOwned && (
-              <Button 
-                size="sm" 
-                className="btn-primary text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 hover:scale-105" // Using .btn-primary and adjusted padding for smaller size
-                onClick={handleMint}
+
+            {/* Sale related buttons */}
+            {isNFT && connectedAddress && isOwned && !showPriceInput && (
+              <>
+                {!isLoadingListing && listingPriceWei && listingPriceWei > BigInt(0) ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5"
+                    onClick={handleDelistTrack}
+                    disabled={isProcessingTx}
+                  >
+                    {isDelistPending || isConfirmingDelist ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ListX className="h-3 w-3 mr-1" />}
+                    Delist
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="btn-secondary text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5" // Assuming btn-secondary for list action
+                    onClick={() => setShowPriceInput(true)}
+                    disabled={isProcessingTx || isLoadingListing}
+                  >
+                    {isLoadingListing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Tag className="h-3 w-3 mr-1" />}
+                    List for Sale
+                  </Button>
+                )}
+              </>
+            )}
+            {isNFT && connectedAddress && !isOwned && !isLoadingListing && listingPriceWei && listingPriceWei > BigInt(0) && (
+              <Button
+                size="sm"
+                className="btn-primary text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 hover:scale-105"
+                onClick={handleBuyTrack}
+                disabled={isProcessingTx}
+              >
+                {isBuyPending || isConfirmingBuy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+                Buy for {formatEther(listingPriceWei)} ETH
+              </Button>
+            )}
+            {/* Fallback to original Mint button if not owned and not listed (e.g. primary market) */}
+            {/* This condition ensures mint button only shows if not for sale and user doesn't own it */}
+            {isNFT && !isOwned && !isLoadingListing && (!listingPriceWei || listingPriceWei === BigInt(0)) && mintStatus && mintStatus !== "Sold Out" && (
+              <Button
+                size="sm"
+                className="btn-primary text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 hover:scale-105"
+                onClick={handleMint} // This is the original mint button logic
               >
                 <Coins className="h-3 w-3 mr-1" />
-                Mint
+                Mint {/* Or text could be "Purchase" if it's a primary sale mechanism */}
               </Button>
             )}
           </div>

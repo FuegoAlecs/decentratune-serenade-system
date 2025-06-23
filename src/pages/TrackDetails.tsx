@@ -9,14 +9,24 @@ import { useQuery } from '@tanstack/react-query';
 // import { parseEther, formatEther, Address } from "ethers"; // formatEther and Address still needed, parseEther might be in useTipArtist
 import { formatEther, Address } from "ethers"; // parseEther is in the hook
 import { useToast } from "@/hooks/use-toast";
-import { ipfsToHttp } from "@/lib/utils";
-import { useTipArtist } from "@/hooks/contracts"; // Import the custom hook
+import { ipfsToHttp, cn } from "@/lib/utils"; // Added cn
+import {
+    useTipArtist,
+    useGetListing,
+    useListTrackForSale,
+    useDelistTrack,
+    useBuyTrack,
+} from "@/hooks/contracts"; // Import the custom hook
+import { Input } from "@/components/ui/input"; // For price input
+import { Tag, ShoppingCart, ListX } from "lucide-react"; // Icons for new buttons
+
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
 // import tipJarAbi from "@/lib/abi/TipJar.json"; // Handled by the hook
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
+// TrackSaleV2 address is already available in the hooks themselves
 
 interface NftMetadata {
   name?: string;
@@ -61,10 +71,13 @@ export default function TrackDetails() {
   const [progress, setProgress] = useState([0]); // Default to 0
   const [isLiked, setIsLiked] = useState(false); // Placeholder for like functionality
   const [tipAmount, setTipAmount] = useState("");
+  const [showPriceInput, setShowPriceInput] = useState(false);
+  const [listPriceEth, setListPriceEth] = useState("");
+
 
   // Wagmi hooks for write operations
-  const { data: buyHash, writeContract: buyNftWrite, isPending: isBuyPending, error: buyError } = useWriteContract(); // Keep for buying NFT
-  const { isLoading: isBuyConfirming, isSuccess: isBuyConfirmed, error: buyConfirmationError } = useWaitForTransactionReceipt({ hash: buyHash });
+  const { data: buyHash, writeContract: buyNftWrite, isPending: isBuyPendingPrimary, error: buyErrorPrimary } = useWriteContract(); // Renamed for clarity (primary market buy)
+  const { isLoading: isBuyConfirmingPrimary, isSuccess: isBuyConfirmedPrimary, error: buyConfirmationErrorPrimary } = useWaitForTransactionReceipt({ hash: buyHash });
 
   // Use the custom hook for tipping
   const {
@@ -78,6 +91,13 @@ export default function TrackDetails() {
     tipConfirmationError
   } = useTipArtist();
 
+  // Hooks for TrackSaleV2 interactions
+  const { data: listingPriceWei, isLoading: isLoadingListing, refetch: refetchListing } = useGetListing(tokenId?.toString());
+  const { listTrack, isListPending, isConfirmingList, listError, isListConfirmed } = useListTrackForSale();
+  const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
+  const { buyTrack: buyListedTrack, isBuyPending: isBuyListedPending, isConfirmingBuy: isConfirmingBuyListed, buyError: buyListedError, isBuyConfirmed: isBuyListedConfirmed, buyHash: buyListedHash } = useBuyTrack();
+
+  const isProcessingMarketTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyListedPending || isConfirmingBuyListed;
 
   // 1. Fetch Token URI
   const { data: tokenUriData, isLoading: isTokenUriLoading, error: tokenUriError } = useReadContract({
@@ -135,8 +155,8 @@ export default function TrackDetails() {
     }
   }, [metadataError, tokenUriError, toast, isTokenUriLoading]);
 
-
-  const handleBuyNFT = () => {
+  // Handler for primary market buy (if applicable, from original contract)
+  const handleBuyNFTPrimary = () => {
     if (!isConnected || !userAddress) {
       toast({ title: "Connect Wallet", description: "Please connect your wallet to buy.", variant: "destructive" });
       return;
@@ -145,11 +165,12 @@ export default function TrackDetails() {
       toast({ title: "Error", description: "NFT data not available.", variant: "destructive" });
       return;
     }
+    // This logic is for the primary sale via MusicNFT contract's `buy` function
     if (!nftContractData.forSale) {
-        toast({ title: "Not for Sale", description: "This NFT is currently not for sale.", variant: "destructive" });
+        toast({ title: "Not for Primary Sale", description: "This NFT is not currently for primary sale.", variant: "destructive" });
         return;
     }
-    if (nftContractData.owner === userAddress) {
+    if (nftContractData.owner === userAddress && nftContractData.minter !== userAddress) { // Check if already owned by someone else
         toast({ title: "Already Owned", description: "You already own this NFT.", variant: "destructive" });
         return;
     }
@@ -157,11 +178,41 @@ export default function TrackDetails() {
     buyNftWrite({
       address: musicNftContractAddress,
       abi: musicNftAbi,
-      functionName: 'buy', // Or your specific purchase function
+      functionName: 'buy', // This is MusicNFT.buy, not TrackSaleV2.buy
       args: [tokenId],
-      value: nftContractData.price, // Price should be in wei from contract
+      value: nftContractData.price, // Price from MusicNFT contract details
     });
   };
+
+  // Handlers for TrackSaleV2 interactions
+  const handleListTrackForSale = async () => {
+    if (!listPriceEth || parseFloat(listPriceEth) <= 0) {
+      toast({ title: "Invalid Price", description: "Please enter a valid price greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (!tokenId) return;
+    // TODO: Add NFT approval check here before calling listTrack
+    await listTrack(tokenId.toString(), listPriceEth);
+    setShowPriceInput(false);
+  };
+
+  const handleDelistListedTrack = async () => {
+    if (!tokenId) return;
+    await delistTrack(tokenId.toString());
+  };
+
+  const handleBuyListedTrack = async () => {
+    if (!listingPriceWei || !tokenId) {
+      toast({ title: "Error", description: "Track is not listed or price is unavailable.", variant: "destructive" });
+      return;
+    }
+    if (!isConnected || !userAddress) {
+      toast({ title: "Connect Wallet", description: "Please connect your wallet to buy.", variant: "destructive" });
+      return;
+    }
+    await buyListedTrack(tokenId.toString(), listingPriceWei);
+  };
+
 
   const handleTipArtist = () => {
     if (!isConnected || !userAddress) {
@@ -190,14 +241,42 @@ export default function TrackDetails() {
 
   // Effects for buy/tip transaction outcomes
   useEffect(() => {
-    if (isBuyConfirmed) {
-      toast({ title: "Purchase Successful!", description: `NFT purchased. Transaction: ${buyHash}` });
-      refetchContractDetails(); // Refetch details to update owner, availability etc.
+    if (isBuyConfirmedPrimary) {
+      toast({ title: "Purchase Successful!", description: `NFT purchased (primary market). Transaction: ${buyHash}` });
+      refetchContractDetails();
+      refetchListing(); // Also refetch marketplace listing status
     }
-    if (buyError || buyConfirmationError) {
-      toast({ title: "Purchase Failed", description: (buyError?.message || buyConfirmationError?.message) ?? "Error during purchase.", variant: "destructive" });
+    if (buyErrorPrimary || buyConfirmationErrorPrimary) {
+      toast({ title: "Primary Purchase Failed", description: (buyErrorPrimary?.message || buyConfirmationErrorPrimary?.message) ?? "Error during primary market purchase.", variant: "destructive" });
     }
-  }, [isBuyConfirmed, buyError, buyConfirmationError, buyHash, toast, refetchContractDetails]);
+  }, [isBuyConfirmedPrimary, buyErrorPrimary, buyConfirmationErrorPrimary, buyHash, toast, refetchContractDetails, refetchListing]);
+
+  useEffect(() => {
+    if (isListConfirmed) {
+      toast({ title: "Track Listed!", description: "Your track is now listed for sale." });
+      refetchListing();
+    }
+    if (listError) toast({ title: "Listing Failed", description: listError.message, variant: "destructive" });
+
+    if (isDelistConfirmed) {
+      toast({ title: "Track Delisted!", description: "Your track has been removed from sale." });
+      refetchListing();
+    }
+    if (delistError) toast({ title: "Delisting Failed", description: delistError.message, variant: "destructive" });
+
+    if (isBuyListedConfirmed) {
+      toast({ title: "Purchase Successful!", description: `Track purchased from marketplace. Transaction: ${buyListedHash}` });
+      refetchListing();
+      refetchContractDetails(); // Owner has changed
+    }
+    if (buyListedError) toast({ title: "Marketplace Purchase Failed", description: buyListedError.message, variant: "destructive" });
+
+  }, [
+    isListConfirmed, listError,
+    isDelistConfirmed, delistError,
+    isBuyListedConfirmed, buyListedError, buyListedHash,
+    toast, refetchListing, refetchContractDetails
+  ]);
 
   useEffect(() => {
     // Adjusted to use states from useTipArtist hook
@@ -211,13 +290,13 @@ export default function TrackDetails() {
   }, [isTipConfirmed, tipError, tipConfirmationError, tipHash, tipAmount, toast]); // tipAmount is still used for the toast message
 
 
-  const isLoading = isTokenUriLoading || isMetadataLoading || isContractDetailsLoading;
+  const isLoading = isTokenUriLoading || isMetadataLoading || isContractDetailsLoading || isLoadingListing;
 
-  if (isLoading && !nftMetadata && !nftContractData) { // Initial full load
+  if (isLoading && !nftMetadata && !nftContractData && listingPriceWei === undefined) { // Initial full load, check listingPriceWei too
     return (
       <div className="min-h-screen bg-gradient-dark text-white flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-dt-primary" />
-        <p className="ml-4 text-xl">Loading Track Details...</p>
+        <p className="ml-4 text-xl">Loading Track Details...</p> {/* General loading message */}
       </div>
     );
   }
@@ -237,19 +316,29 @@ export default function TrackDetails() {
     : (nftContractData?.minter ? `${nftContractData.minter.slice(0,6)}...${nftContractData.minter.slice(-4)}` : "Loading artist...");
   const displayArtistFull = nftMetadata?.properties?.creator_address || nftContractData?.minter;
 
-  const displayImage = ipfsToHttp(nftMetadata?.image) || "/placeholder.svg"; // Use a placeholder if image not loaded
+  const displayImage = ipfsToHttp(nftMetadata?.image) || "/placeholder.svg";
   const displayDuration = nftMetadata?.duration || "N/A";
-  const displayPrice = nftContractData ? formatEther(nftContractData.price) : "N/A";
-  const displayMintDate = "N/A"; // This would ideally come from metadata or contract event
+  // Primary market price from MusicNFT contract
+  const primaryMarketPriceEth = nftContractData?.price ? formatEther(nftContractData.price) : null;
+  // Secondary market price from TrackSaleV2 contract
+  const secondaryMarketPriceEth = listingPriceWei && listingPriceWei > BigInt(0) ? formatEther(listingPriceWei) : null;
+
+  const displayMintDate = "N/A";
   const displayGenre = nftMetadata?.genre || nftMetadata?.attributes?.find(a => a.trait_type === "Genre")?.value?.toString() || "N/A";
 
   const displayTotalSupply = nftContractData ? nftContractData.totalSupply.toString() : "N/A";
   const displaySoldCount = nftContractData ? nftContractData.soldCount.toString() : "N/A";
   const displayRemaining = nftContractData ? (nftContractData.totalSupply - nftContractData.soldCount).toString() : "N/A";
 
-  const isOwnedByCurrentUser = userAddress && nftContractData && nftContractData.owner === userAddress;
-  const isForSale = nftContractData?.forSale ?? false;
-  const canBuy = isForSale && !isOwnedByCurrentUser && nftContractData && nftContractData.soldCount < nftContractData.totalSupply;
+  const isOwnedByCurrentUser = userAddress && nftContractData && nftContractData.owner.toLowerCase() === userAddress.toLowerCase();
+
+  // Primary market sale status (from MusicNFT contract)
+  const isForPrimarySale = nftContractData?.forSale ?? false;
+  const canBuyPrimary = isForPrimarySale && !isOwnedByCurrentUser && nftContractData && nftContractData.soldCount < nftContractData.totalSupply;
+
+  // Secondary market sale status (from TrackSaleV2)
+  const isForSecondarySale = !!secondaryMarketPriceEth;
+  const canBuySecondary = isForSecondarySale && !isOwnedByCurrentUser;
 
 
   return (
@@ -320,12 +409,31 @@ export default function TrackDetails() {
               <h2 className="font-satoshi font-bold text-xl mb-4">NFT Details</h2>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-dt-gray-light">Price</span>
-                  <span className="font-semibold text-dt-primary text-lg">{displayPrice} ETH</span>
+                  <span className="text-dt-gray-light">Status</span>
+                  {isLoadingListing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {!isLoadingListing && isForSecondarySale && <span className="font-semibold text-green-400">For Sale (Market)</span>}
+                  {!isLoadingListing && !isForSecondarySale && isForPrimarySale && <span className="font-semibold text-blue-400">For Sale (Primary)</span>}
+                  {!isLoadingListing && !isForSecondarySale && !isForPrimarySale && Number(displayRemaining) > 0 && <span className="font-semibold text-gray-400">Not for Sale</span>}
+                  {!isLoadingListing && !isForSecondarySale && !isForPrimarySale && Number(displayRemaining) === 0 && <span className="font-semibold text-red-500">Sold Out</span>}
                 </div>
+
+                {(isForSecondarySale || isForPrimarySale) && (
+                  <div className="flex justify-between">
+                    <span className="text-dt-gray-light">Price</span>
+                    <span className="font-semibold text-dt-primary text-lg">
+                      {secondaryMarketPriceEth || primaryMarketPriceEth || "N/A"} ETH
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-dt-gray-light">Available</span>
+                  <span className="text-dt-gray-light">Available (Primary)</span>
                   <span>{displayRemaining} of {displayTotalSupply}</span>
+                </div>
+                 <div className="flex justify-between">
+                  <span className="text-dt-gray-light">Owner</span>
+                  <span className="font-mono text-sm">
+                    {nftContractData?.owner ? `${nftContractData.owner.slice(0,6)}...${nftContractData.owner.slice(-4)}` : "Loading..."}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-dt-gray-light">Mint Date</span>
@@ -337,24 +445,98 @@ export default function TrackDetails() {
                 </div>
               </div>
 
-              {isOwnedByCurrentUser ? (
-                <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
-                  You own this NFT
-                </Button>
-              ) : canBuy ? (
-                <Button
-                  className="w-full btn-primary mt-6 text-base sm:text-lg py-3"
-                  onClick={handleBuyNFT}
-                  disabled={isBuyPending || isBuyConfirming}
-                >
-                  {isBuyPending || isBuyConfirming ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : null}
-                  {isBuyPending || isBuyConfirming ? 'Processing...' : `Buy NFT for ${displayPrice} ETH`}
-                </Button>
-              ) : (
-                <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
-                  { Number(displayRemaining) === 0 ? "Sold Out" : "Not Available" }
-                </Button>
-              )}
+              {/* Action Buttons Section */}
+              <div className="mt-6 space-y-3">
+                {isOwnedByCurrentUser && !isForSecondarySale && !showPriceInput && (
+                  <Button
+                    className="w-full btn-secondary text-base sm:text-lg py-3"
+                    onClick={() => setShowPriceInput(true)}
+                    disabled={isProcessingMarketTx || isLoadingListing}
+                  >
+                    {isLoadingListing && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+                    {!isLoadingListing && <Tag className="h-5 w-5 mr-2" />}
+                    List for Sale
+                  </Button>
+                )}
+
+                {isOwnedByCurrentUser && showPriceInput && (
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Set price in ETH"
+                      value={listPriceEth}
+                      onChange={(e) => setListPriceEth(e.target.value)}
+                      className="bg-white/10 border-white/20"
+                      disabled={isProcessingMarketTx}
+                    />
+                    <div className="flex space-x-2">
+                      <Button
+                        className="flex-1 btn-primary"
+                        onClick={handleListTrackForSale}
+                        disabled={isProcessingMarketTx || !listPriceEth || parseFloat(listPriceEth) <= 0}
+                      >
+                        {isListPending || isConfirmingList ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : "Confirm Listing"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowPriceInput(false)}
+                        disabled={isProcessingMarketTx}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isOwnedByCurrentUser && isForSecondarySale && (
+                  <Button
+                    className="w-full btn-outline border-red-500 text-red-500 hover:bg-red-500/10 text-base sm:text-lg py-3"
+                    onClick={handleDelistListedTrack}
+                    disabled={isProcessingMarketTx}
+                  >
+                    {isDelistPending || isConfirmingDelist ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ListX className="h-5 w-5 mr-2" />}
+                    Delist Track
+                  </Button>
+                )}
+
+                {!isOwnedByCurrentUser && canBuySecondary && (
+                  <Button
+                    className="w-full btn-primary text-base sm:text-lg py-3"
+                    onClick={handleBuyListedTrack}
+                    disabled={isProcessingMarketTx || isLoadingListing}
+                  >
+                    {isBuyListedPending || isConfirmingBuyListed ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
+                    {`Buy for ${secondaryMarketPriceEth} ETH`}
+                  </Button>
+                )}
+
+                {/* Fallback to primary market buy if not listed on secondary and available */}
+                {!isOwnedByCurrentUser && !isForSecondarySale && canBuyPrimary && (
+                  <Button
+                    className="w-full btn-primary mt-6 text-base sm:text-lg py-3"
+                    onClick={handleBuyNFTPrimary}
+                    disabled={isBuyPendingPrimary || isBuyConfirmingPrimary}
+                  >
+                    {isBuyPendingPrimary || isBuyConfirmingPrimary ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Coins className="h-5 w-5 mr-2"/>}
+                    {isBuyPendingPrimary || isBuyConfirmingPrimary ? 'Processing...' : `Buy (Primary) for ${primaryMarketPriceEth} ETH`}
+                  </Button>
+                )}
+
+                {/* Message if owned / not for sale and not owner */}
+                {isOwnedByCurrentUser && !isForSecondarySale && !showPriceInput && (
+                    <p className="text-center text-dt-gray-light text-sm mt-2">You own this track. List it on the marketplace!</p>
+                )}
+                 {!isOwnedByCurrentUser && !canBuySecondary && !canBuyPrimary && Number(displayRemaining) > 0 && (
+                  <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
+                    Not currently for sale
+                  </Button>
+                )}
+                {!isOwnedByCurrentUser && !canBuySecondary && !canBuyPrimary && Number(displayRemaining) === 0 && (
+                  <Button className="w-full btn-secondary mt-6 text-base sm:text-lg py-3" disabled>
+                    Sold Out (Primary)
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="glass-card p-4 sm:p-6 rounded-2xl">

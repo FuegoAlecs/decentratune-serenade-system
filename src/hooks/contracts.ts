@@ -12,9 +12,11 @@ import { Alchemy, Network, type OwnedNft } from 'alchemy-sdk'; // Added Nft and 
 
 import musicNftAbi from '@/lib/abi/MusicNFT.json';
 import tipJarAbi from '@/lib/abi/TipJar.json';
+import trackSaleV2Abi from '@/lib/abi/TrackSaleV2.json'; // Import the new ABI
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
+const trackSaleV2ContractAddress = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Add new contract address
 const alchemyApiKey = import.meta.env.VITE_ALCHEMY_KEY;
 
 // Configure Alchemy SDK
@@ -248,6 +250,221 @@ export function useTracksOwned(ownerAddress?: Address) {
 
 // TODO: Consider useTrackDetails hook for fetching single track details (tokenURI + on-chain data).
 // `TrackDetails.tsx` still uses direct contract reads.
+
+// --- TrackSaleV2 Hooks ---
+
+// Hook to list a track for sale
+export function useListTrackForSale() {
+    const { address: connectedAddress } = useAccount();
+    const {
+        data: hash,
+        writeContract,
+        isPending: isListPending,
+        error: listError,
+        status: listStatus,
+    } = useWriteContract();
+
+    const {
+        data: receipt,
+        isLoading: isConfirming,
+        isSuccess: isConfirmed,
+        error: confirmationError,
+    } = useWaitForTransactionReceipt({ hash });
+
+    const listTrack = async (tokenId: string, priceEth: string) => {
+        if (!trackSaleV2ContractAddress) {
+            console.error("TrackSaleV2 contract address not configured.");
+            return; // Or throw error
+        }
+        if (!connectedAddress) {
+            console.error("No wallet connected to list the track.");
+            return; // Or throw error
+        }
+        if (!musicNftContractAddress) {
+            console.error("MusicNFT contract address not configured for approval check.");
+            return;
+        }
+
+        let priceWei;
+        try {
+            priceWei = parseEther(priceEth);
+        } catch (e) {
+            console.error("Invalid price:", priceEth, e);
+            return;
+        }
+        if (priceWei <= BigInt(0)) {
+            console.error("Price must be positive.");
+            return;
+        }
+
+        // TODO: Add approval check/request for TrackSaleV2 to transfer this specific MusicNFT token
+        // This is a crucial step. For now, assuming approval is already granted.
+        // A complete implementation would:
+        // 1. Check allowance: `musicNftContract.allowance(connectedAddress, trackSaleV2ContractAddress)`
+        // 2. If allowance is insufficient for the tokenId (or generally), request approval:
+        //    `musicNftContract.approve(trackSaleV2ContractAddress, tokenId)`
+        //    This would be another writeContract call.
+
+        console.log(`Listing track ${tokenId} for ${priceEth} ETH (${priceWei} wei)`);
+
+        writeContract({
+            address: trackSaleV2ContractAddress,
+            abi: trackSaleV2Abi,
+            functionName: 'setTrackPrice', // from ABI: setTrackPrice(uint256 tokenId, uint256 priceWei)
+            args: [BigInt(tokenId), priceWei],
+        });
+    };
+
+    return {
+        listTrack,
+        listHash: hash,
+        isListPending,
+        listError,
+        listStatus,
+        isConfirmingList: isConfirming,
+        isListConfirmed: isConfirmed,
+        listConfirmationError: confirmationError,
+        listReceipt: receipt,
+    };
+}
+
+// Hook to delist a track
+export function useDelistTrack() {
+    const { address: connectedAddress } = useAccount();
+    const {
+        data: hash,
+        writeContract,
+        isPending: isDelistPending,
+        error: delistError,
+        status: delistStatus,
+    } = useWriteContract();
+
+    const {
+        data: receipt,
+        isLoading: isConfirming,
+        isSuccess: isConfirmed,
+        error: confirmationError,
+    } = useWaitForTransactionReceipt({ hash });
+
+    const delistTrack = async (tokenId: string) => {
+        if (!trackSaleV2ContractAddress) {
+            console.error("TrackSaleV2 contract address not configured.");
+            return;
+        }
+        if (!connectedAddress) {
+            console.error("No wallet connected to delist the track.");
+            return;
+        }
+        console.log(`Delisting track ${tokenId}`);
+        writeContract({
+            address: trackSaleV2ContractAddress,
+            abi: trackSaleV2Abi,
+            functionName: 'delistTrack', // from ABI: delistTrack(uint256 tokenId)
+            args: [BigInt(tokenId)],
+        });
+    };
+
+    return {
+        delistTrack,
+        delistHash: hash,
+        isDelistPending,
+        delistError,
+        delistStatus,
+        isConfirmingDelist: isConfirming,
+        isDelistConfirmed: isConfirmed,
+        delistConfirmationError: confirmationError,
+        delistReceipt: receipt,
+    };
+}
+
+// Hook to buy a track
+export function useBuyTrack() {
+    const { address: connectedAddress } = useAccount();
+    const {
+        data: hash,
+        writeContract,
+        isPending: isBuyPending,
+        error: buyError,
+        status: buyStatus,
+    } = useWriteContract();
+
+    const {
+        data: receipt,
+        isLoading: isConfirming,
+        isSuccess: isConfirmed,
+        error: confirmationError,
+    } = useWaitForTransactionReceipt({ hash });
+
+    const buyTrack = async (tokenId: string, priceWei: bigint) => {
+        if (!trackSaleV2ContractAddress) {
+            console.error("TrackSaleV2 contract address not configured.");
+            return;
+        }
+        if (!connectedAddress) {
+            console.error("No wallet connected to buy the track.");
+            return;
+        }
+        if (priceWei <= BigInt(0)) {
+            console.error("Price must be positive for buying.");
+            return;
+        }
+        console.log(`Buying track ${tokenId} for ${priceWei} wei`);
+        writeContract({
+            address: trackSaleV2ContractAddress,
+            abi: trackSaleV2Abi,
+            functionName: 'buy', // from ABI: buy(uint256 tokenId)
+            args: [BigInt(tokenId)],
+            value: priceWei,
+        });
+    };
+
+    return {
+        buyTrack,
+        buyHash: hash,
+        isBuyPending,
+        buyError,
+        buyStatus,
+        isConfirmingBuy: isConfirming,
+        isBuyConfirmed: isConfirmed,
+        buyConfirmationError: confirmationError,
+        buyReceipt: receipt,
+    };
+}
+
+// Hook to get listing details for a track
+export function useGetListing(tokenId?: string) {
+    const publicClient = usePublicClient();
+    const { data: account } = useAccount(); // To potentially disable if owner, etc.
+
+    return useQuery<bigint | null, Error>({
+        queryKey: ['trackListing', trackSaleV2ContractAddress, tokenId],
+        queryFn: async () => {
+            if (!publicClient) throw new Error("Public client not available.");
+            if (!trackSaleV2ContractAddress) throw new Error("TrackSaleV2 contract address not configured.");
+            if (!tokenId) return null; // Or throw, or handle as "not listed"
+
+            try {
+                const price = await publicClient.readContract({
+                    address: trackSaleV2ContractAddress,
+                    abi: trackSaleV2Abi,
+                    functionName: 'getPrice', // from ABI: getPrice(uint256 tokenId) returns (uint256)
+                    args: [BigInt(tokenId)],
+                });
+                // If price is 0, it means not listed or listing removed.
+                return price > BigInt(0) ? price as bigint : null;
+            } catch (e: any) {
+                // Handle cases where the contract might revert if token doesn't exist or other errors
+                // For example, if getPrice reverts for a non-listed token instead of returning 0.
+                // The current ABI implies it returns 0 for non-listed, but good to be safe.
+                console.warn(`Could not fetch listing for token ${tokenId}: ${e.message}`);
+                return null; // Treat as not listed on error
+            }
+        },
+        enabled: !!publicClient && !!trackSaleV2ContractAddress && !!tokenId && !!account?.address,
+        staleTime: 1000 * 60 * 1, // 1 minute stale time
+        // refetchInterval: 1000 * 60 * 2, // Optionally refetch periodically
+    });
+}
 
 
 // --- Hook to Get All NFTs for a specific contract (e.g., for an Explore page) ---

@@ -351,15 +351,15 @@ export default function Profile() {
               {ownedNftsToDisplay.map((nft) => (
                 <TrackCard
                   key={nft.id}
-                  id={nft.id} // Pass string ID from AppNftItem
+                  id={nft.id}
                   title={nft.name || "Untitled Track"}
-                  artist={nft.collectionName || "Unknown Artist"}
+                  artist={nft.collectionName || "Unknown Artist"} // This is more like collection name, artist display name might be in metadata
+                  ownerAddress={profileAddress} // Pass the owner address (the profile being viewed)
                   image={nft.imageUrl || "/placeholder.svg"}
-                  audioUrl={nft.audioUrl} // Pass the audioUrl
+                  audioUrl={nft.audioUrl}
                   isNFT={true}
-                  isOwned={true} // These are owned tracks
-                  // Optional: Pass other relevant props if available and handled by TrackCard
-                  // duration={nft.rawMetadata?.duration || "0:00"} // Example if duration is in raw metadata
+                  // isOwned is now determined within TrackCard based on ownerAddress and connectedAddress
+                  // duration, plays, etc., can be passed if available in AppNftItem/rawMetadata
                 />
               ))}
             </div>
@@ -372,33 +372,21 @@ export default function Profile() {
           ) : fetchedUploadedNfts.length === 0 ? (
             <p className="text-center text-dt-gray-light py-10">No tracks uploaded yet.</p>
           ) : (
-            <div className="space-y-6">
+            // Using TrackCard directly for uploaded tracks for consistency
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {fetchedUploadedNfts.map((track) => (
-                // TODO: This display for uploaded tracks might need more specific data like sales, revenue, etc.
-                // which would require additional contract calls per track or a more complex 'getTokensMintedBy' return structure.
-                // For now, using similar structure to owned tracks.
-                <div key={track.id.toString()} className="glass-card p-4 sm:p-6 rounded-2xl">
-                  <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:space-x-4">
-                    <img
-                        src={ipfsToHttp(track.image) || "/placeholder.svg"}
-                        alt={track.name || "Track image"}
-                        className="w-full max-w-[150px] sm:w-20 h-auto sm:h-20 aspect-square sm:aspect-auto object-cover rounded-xl mb-4 sm:mb-0 bg-white/5"
-                    />
-                    <div className="flex-1 w-full">
-                      <h3 className="font-satoshi font-semibold text-lg mb-1 truncate" title={track.name}>{track.name || "Untitled Track"}</h3>
-                      {/* <p className="text-dt-gray-light text-sm mb-3">Minted: {track.mintDate}</p> */} {/* Mint date not available directly from generic metadata */}
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 text-xs sm:text-sm mb-4 sm:mb-0">
-                        <div> <span className="text-dt-gray-light">Token ID</span> <p className="font-semibold">{track.id.toString()}</p> </div>
-                        {/* TODO: Fetch and display Sales, Revenue, Status from contract if available for this specific token */}
-                        <div> <span className="text-dt-gray-light">Sales</span> <p className="font-semibold">N/A</p> </div>
-                        <div> <span className="text-dt-gray-light">Revenue</span> <p className="font-semibold text-dt-primary">N/A</p> </div>
-                      </div>
-                    </div>
-                    <Link to={`/track/${track.id.toString()}`} className="w-full sm:w-auto sm:ml-auto mt-4 sm:mt-0">
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto"> View Details </Button>
-                    </Link>
-                  </div>
-                </div>
+                <TrackCard
+                  key={track.id.toString()}
+                  id={track.id.toString()}
+                  title={track.name || "Untitled Track"}
+                  // Artist here is the minter, which is the profileAddress
+                  artist={ensName || displayAddress}
+                  ownerAddress={profileAddress} // Minter is assumed owner for list/delist on this tab
+                  image={ipfsToHttp(track.image) || "/placeholder.svg"}
+                  audioUrl={track.audio ? ipfsToHttp(track.audio) : undefined}
+                  isNFT={true}
+                  // duration, plays, etc. would come from track.attributes or track.properties if available
+                />
               ))}
             </div>
           )
