@@ -251,7 +251,7 @@ export function useTracksOwned(ownerAddress?: Address) {
 // TODO: Consider useTrackDetails hook for fetching single track details (tokenURI + on-chain data).
 // `TrackDetails.tsx` still uses direct contract reads.
 
-import { useState } from 'react'; // Import useState
+import { useState, useEffect } from 'react'; // Import useState and useEffect
 
 // --- TrackSaleV2 Hooks ---
 
