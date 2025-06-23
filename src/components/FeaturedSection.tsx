@@ -46,21 +46,58 @@ async function fetchFeaturedNfts(): Promise<AppNftItem[]> {
   // OR, we can use useAllMusicNFTs and filter by IDs if that's easier.
   // For now, let's map directly to what TrackCard might need, similar to AppNftItem but simplified.
 
-  return successfulNfts.map(nft => {
-    // Direct mapping, similar to transformAlchemyNft but from Nft type
+  const pinataGateway = "https://harlequin-leading-squirrel-331.mypinata.cloud/ipfs/";
+
+  return successfulNfts.map((nft: Nft): AppNftItem => {
     let imageUrl = nft.media?.[0]?.gateway || nft.raw?.metadata?.image || (nft as any).contract?.openSeaMetadata?.imageUrl;
-    if (imageUrl?.startsWith("ipfs://")) {
-        imageUrl = `https://ipfs.io/ipfs/${imageUrl.substring(7)}`;
+    if (imageUrl) {
+      if (imageUrl.startsWith("ipfs://")) {
+        imageUrl = `${pinataGateway}${imageUrl.substring(7)}`;
+      } else if (!imageUrl.startsWith("http")) {
+        // Basic CID check, assuming it's a raw CID for an image
+        const looksLikeCid = imageUrl.length > 40 && (imageUrl.startsWith("Qm") || imageUrl.startsWith("bafy"));
+        if (looksLikeCid) {
+          imageUrl = `${pinataGateway}${imageUrl}`;
+        }
+      }
     }
+
+    let audioUrl: string | undefined = undefined;
+    const rawMetadata = nft.raw?.metadata;
+
+    if (rawMetadata) {
+      const animationUrlField = rawMetadata.animation_url as string | undefined;
+      const audioField = rawMetadata.audio as string | undefined;
+
+      if (typeof animationUrlField === 'string' && animationUrlField.trim() !== '') {
+        if (animationUrlField.startsWith("ipfs://")) {
+          audioUrl = `${pinataGateway}${animationUrlField.substring(7)}`;
+        } else if (!animationUrlField.startsWith("http")) { // Assume raw CID
+          audioUrl = `${pinataGateway}${animationUrlField}`;
+        } else {
+          audioUrl = animationUrlField; // Already a full URL
+        }
+      } else if (typeof audioField === 'string' && audioField.trim() !== '') {
+        if (audioField.startsWith("ipfs://")) {
+          audioUrl = `${pinataGateway}${audioField.substring(7)}`;
+        } else if (!audioField.startsWith("http")) { // Assume raw CID
+          audioUrl = `${pinataGateway}${audioField}`;
+        } else {
+          audioUrl = audioField; // Already a full URL
+        }
+      }
+    }
+
     return {
       id: nft.tokenId,
       name: nft.name || nft.contract?.name || 'Unnamed NFT',
-      description: nft.description || nft.contract?.openSeaMetadata?.description,
-      imageUrl: imageUrl,
-      audioUrl: nft.raw?.metadata?.audio || nft.raw?.metadata?.animation_url, // Example
+      description: nft.description || nft.contract?.openSeaMetadata?.description || "",
+      imageUrl: imageUrl || undefined, // Ensure it can be undefined if not resolved
+      audioUrl: audioUrl, // This will be the processed URL
       contractAddress: nft.contract.address,
-      collectionName: nft.contract.name || nft.contract.symbol, // For 'artist'
-      // Other fields AppNftItem has, like externalUrl, rawMetadata can be added if needed
+      collectionName: nft.contract.name || nft.contract.symbol || undefined,
+      rawMetadata: rawMetadata as Record<string, any> | undefined, // Cast for AppNftItem type
+      // externalUrl is not directly available on Nft type like on OwnedNft, so omit or get from rawMetadata if needed
     };
   });
 }
