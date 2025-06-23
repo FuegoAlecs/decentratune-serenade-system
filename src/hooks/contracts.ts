@@ -619,9 +619,12 @@ export function useGetListing(tokenId?: string) {
                 return null; // Treat as not listed on error
             }
         },
-        enabled: !!publicClient && !!trackSaleV2ContractAddress && !!tokenId && !!account?.address,
+        // Fetching public price data should not strictly depend on a connected account.
+        // It will run if publicClient, contractAddress, and tokenId are available.
+        // The hook will refetch if any part of its queryKey (including tokenId) changes.
+        enabled: !!publicClient && !!trackSaleV2ContractAddress && !!tokenId,
         staleTime: 1000 * 60 * 1, // 1 minute stale time
-        // refetchInterval: 1000 * 60 * 2, // Optionally refetch periodically
+        // refetchInterval: 1000 * 30, // Optional: more frequent refetching for price updates
     });
 }
 
