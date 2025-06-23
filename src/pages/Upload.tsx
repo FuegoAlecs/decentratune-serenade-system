@@ -196,10 +196,13 @@ export default function Upload() {
       }
 
       // Simplified: Show generic success and always navigate to profile
-      toast.success(
-        `${formData.title} minted successfully! Transaction: ${mintHash}`,
-        { duration: 7000 }
-      );
+      // Corrected toast call:
+      toast({
+        title: "Mint Successful!",
+        description: `${formData.title} has been minted. Tx: ${mintHash ? mintHash.slice(0,10)+'...' : 'N/A'}`,
+        duration: 7000,
+        // variant: "success", // Or your default variant if it looks like success
+      });
       navigate('/profile');
     } else if (mintError || confirmationError) { // Handle errors only if not confirmed
       // Ensure toast is only shown if there's an actual error and not just pending/idle states
