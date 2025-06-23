@@ -403,5 +403,149 @@ export function useRecentTracks(count: number = 5) {
   });
 }
 
-// Need to import usePublicClient from wagmi
-// import { usePublicClient } from 'wagmi'; // Add this to imports at the top of the file
+import { type AssetTransfersWithMetadataResponse, type AssetTransfersCategory } from 'alchemy-sdk';
+
+// --- Hook to Get Recent Transactions for an Address (using Alchemy) ---
+export interface SimplifiedTransaction {
+  hash: string;
+  type: string; // e.g., "Send", "Receive", "Mint", "Approve"
+  summary: string; // e.g., "Sent 0.1 ETH to 0xabc..." or "Minted 'Track Title'"
+  date: Date;
+  value?: string; // e.g., "0.1 ETH" or "1 NFT"
+  asset?: string; // e.g., "ETH", "USDC", "YourNFTName"
+  explorerUrl?: string; // Link to Etherscan/SepoliaScan
+}
+
+const getExplorerBaseUrl = () => {
+  // TODO: Make this dynamic based on configured chain ID (VITE_CHAIN_ID)
+  // For now, assuming Sepolia if no specific chain info available from wagmi/alchemy config here
+  const chainId = import.meta.env.VITE_CHAIN_ID || '11155111'; // Default to Sepolia
+  if (chainId === '1') return "https://etherscan.io/tx/";
+  if (chainId === '11155111') return "https://sepolia.etherscan.io/tx/";
+  // Add other chains as needed
+  return "https://etherscan.io/tx/"; // Fallback
+};
+
+
+export function useRecentTransactions(address?: Address, count: number = 5) {
+  return useQuery<SimplifiedTransaction[], Error>({
+    queryKey: ['recentTransactions', address, count, musicNftContractAddress],
+    queryFn: async () => {
+      if (!address || !alchemy) {
+        throw new Error("Address or Alchemy SDK not available");
+      }
+
+      try {
+        const categories: AssetTransfersCategory[] = [
+          "external", "internal", "erc20", "erc721", "erc1155"
+        ];
+
+        // Fetch transactions sent FROM the address
+        const sentTxResponse: AssetTransfersWithMetadataResponse = await alchemy.core.getAssetTransfers({
+          fromAddress: address,
+          category: categories,
+          order: "desc",
+          maxCount: count * 2, // Fetch more to allow merging and still get `count` recent
+          withMetadata: true,
+          excludeZeroValue: true,
+        });
+
+        // Fetch transactions sent TO the address
+        const receivedTxResponse: AssetTransfersWithMetadataResponse = await alchemy.core.getAssetTransfers({
+          toAddress: address,
+          category: categories,
+          order: "desc",
+          maxCount: count * 2, // Fetch more
+          withMetadata: true,
+          excludeZeroValue: true,
+        });
+
+        // Combine, deduplicate (by hash), and sort
+        const allUserTxs = [...sentTxResponse.transfers, ...receivedTxResponse.transfers];
+        const uniqueTxs = Array.from(new Map(allUserTxs.map(tx => [tx.hash, tx])).values());
+
+        uniqueTxs.sort((a, b) => {
+            // Alchemy's metadata.blockTimestamp is "YYYY-MM-DDTHH:mm:ss.SSSZ"
+            return new Date(b.metadata.blockTimestamp).getTime() - new Date(a.metadata.blockTimestamp).getTime();
+        });
+
+        const explorerBaseUrl = getExplorerBaseUrl();
+
+        return uniqueTxs.slice(0, count).map((tx): SimplifiedTransaction => {
+          const date = new Date(tx.metadata.blockTimestamp);
+          let type = "Unknown";
+          let summary = `Tx: ${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`;
+          let valueDisplay = tx.value?.toString() ?? "";
+          let assetDisplay = tx.asset ?? "";
+
+          const isSender = tx.from.toLowerCase() === address.toLowerCase();
+          const isReceiver = tx.to?.toLowerCase() === address.toLowerCase();
+
+          if (tx.category === "erc721" || tx.category === "erc1155") {
+            const tokenId = tx.tokenId ? ` #${BigInt(tx.tokenId).toString()}` : "";
+            assetDisplay = tx.asset || (tx.rawContract.address === musicNftContractAddress ? "DecentraTune NFT" : "NFT");
+            valueDisplay = `${tx.value || 1} ${assetDisplay}${tokenId}`; // ERC721 value is 1
+            if (tx.rawContract.address === musicNftContractAddress && tx.from === "0x0000000000000000000000000000000000000000") {
+              type = "Mint";
+              summary = `Minted ${assetDisplay}${tokenId}`;
+            } else if (isSender) {
+              type = "Send NFT";
+              summary = `Sent ${valueDisplay} to ${tx.to?.slice(0,6)}...`;
+            } else if (isReceiver) {
+              type = "Receive NFT";
+              summary = `Received ${valueDisplay} from ${tx.from.slice(0,6)}...`;
+            }
+          } else if (tx.category === "erc20") {
+            valueDisplay = `${tx.value ? parseFloat(tx.value.toString()).toFixed(4) : ""} ${tx.asset}`;
+            if (isSender) {
+              type = "Send Token";
+              summary = `Sent ${valueDisplay} to ${tx.to?.slice(0,6)}...`;
+            } else if (isReceiver) {
+              type = "Receive Token";
+              summary = `Received ${valueDisplay} from ${tx.from.slice(0,6)}...`;
+            }
+          } else if (tx.category === "external" || tx.category === "internal") {
+            assetDisplay = "ETH"; // Or native currency based on chain
+             valueDisplay = `${tx.value ? parseFloat(tx.value.toString()).toFixed(5) : ""} ${assetDisplay}`;
+            if (isSender) {
+              type = "Send ETH";
+              summary = `Sent ${valueDisplay} to ${tx.to?.slice(0,6)}...`;
+            } else if (isReceiver) {
+              type = "Receive ETH";
+              summary = `Received ${valueDisplay} from ${tx.from.slice(0,6)}...`;
+            }
+          }
+
+          // Fallback for contract interaction if not fitting above
+          if (type === "Unknown" && tx.to) {
+             if (isSender && tx.to.toLowerCase() === musicNftContractAddress?.toLowerCase()) {
+                type = "Contract Call";
+                summary = `Interacted with DecentraTune Contract`;
+            } else if (isSender) {
+                type = "Contract Call";
+                summary = `Called contract ${tx.to.slice(0,6)}...`;
+            }
+          }
+
+
+          return {
+            hash: tx.hash,
+            type,
+            summary,
+            date,
+            value: valueDisplay,
+            asset: assetDisplay,
+            explorerUrl: `${explorerBaseUrl}${tx.hash}`,
+          };
+        });
+
+      } catch (e) {
+        console.error("Error fetching recent transactions:", e);
+        throw e;
+      }
+    },
+    enabled: !!address && !!alchemy,
+    staleTime: 1000 * 60 * 0.5, // 30 seconds, transactions can update frequently
+    refetchInterval: 1000 * 60 * 1, // Refetch every minute
+  });
+}

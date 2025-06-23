@@ -1,6 +1,17 @@
 
-import { Home, Music, Users, Upload, Wallet, Settings, TrendingUp, CheckCircle, XCircle } from "lucide-react";
-import { useAccount } from "wagmi"; // Import useAccount
+import { Home, Music, Users, Upload, Wallet, Settings, TrendingUp, LogOut, CheckCircle, AlertTriangle, ExternalLink, Loader2 } from "lucide-react"; // Added ExternalLink, Loader2
+import { useAccount, useConnect, useDisconnect, useEnsName } from "wagmi";
+import { injected } from 'wagmi/connectors';
+import { useRecentTransactions, type SimplifiedTransaction } from "@/hooks/contracts"; // Import the new hook and type
+import { formatDistanceToNow } from 'date-fns'; // For relative time
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -57,39 +68,35 @@ const bottomItems = [
 ];
 
 export function AppSidebar() {
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected, connector: activeConnector } = useAccount();
+  const { data: ensName } = useEnsName({ address });
+  const { connect, connectors, error: connectError, isLoading: isConnectLoading, pendingConnector } = useConnect();
+  const { disconnect } = useDisconnect();
 
-  // Determine wallet display name or fallback
-  let walletDisplayName = "Wallet";
-  let WalletIcon = Wallet; // Default icon
+  const {
+    data: transactions,
+    isLoading: isLoadingTransactions,
+    error: transactionsError
+  } = useRecentTransactions(address, 3); // Fetch 3 recent transactions
 
-  if (isConnected && address) {
-    walletDisplayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-    // Optionally, use a different icon or add a status indicator
-    // For example, if you want to show connector icon, that's more complex
-    // For now, just changing text and maybe a generic connected icon
-    WalletIcon = CheckCircle; // Or keep Wallet icon and add a green dot
-  } else {
-    WalletIcon = XCircle; // Or keep Wallet and add a red dot / use default
-  }
+  const injectedConnectorInstance = connectors.find(c => c.id === 'io.metamask' || c.id === 'injected' || c.name.toLowerCase().includes('metamask'));
 
-  // Update bottomItems for Wallet dynamically
-  const dynamicBottomItems = bottomItems.map(item => {
-    if (item.title === "Wallet") {
-      return {
-        ...item,
-        // title: walletDisplayName, // This changes the main text
-        // We want to display the address next to or below "Wallet" or change the icon
-        // Let's adjust how it's rendered directly in the map function below
-      };
+  const handleConnect = () => {
+    const connectorToUse = injectedConnectorInstance || injected();
+    if (connectorToUse) {
+      connect({ connector: connectorToUse });
+    } else {
+      // This case should ideally not happen if wagmi is configured with an injected connector
+      console.error("No suitable injected connector found to initiate connection.");
+      // TODO: Display a toast or user message
     }
-    return item;
-  });
+  };
 
+  // Transaction part will be added later inside the DropdownMenuContent
 
   return (
     <Sidebar className="border-r border-white/10 bg-gradient-dark">
-      <SidebarHeader className="p-4 lg:p-6"> {/* Adjusted padding for mobile-first */}
+      <SidebarHeader className="p-4 lg:p-6">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
             <Music className="h-6 w-6 text-white" />
@@ -128,44 +135,102 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {dynamicBottomItems.map((item) => {
-            if (item.title === "Wallet") {
-              return (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
-                  >
-                    <Link to={item.url} className="flex items-center space-x-3 px-4">
-                      <WalletIcon className={`h-5 w-5 ${isConnected ? 'text-green-400' : 'text-red-400'}`} />
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{item.title}</span>
-                        {isConnected && address && (
-                          <span className="text-xs text-dt-gray-light -mt-1">
-                            {`${address.slice(0, 6)}...${address.slice(-4)}`}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
+          {/* Render other bottom items first if any (e.g., Settings) */}
+          {bottomItems.filter(item => item.title !== "Wallet").map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                asChild
+                className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
+              >
+                <Link to={item.url} className="flex items-center space-x-3 px-4">
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-medium">{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+
+          {/* Wallet Button / Dropdown */}
+          <SidebarMenuItem>
+            {isConnected && address ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1 flex items-center space-x-3 px-4">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Wallet</span>
+                      <span className="text-xs text-dt-gray-light -mt-1 truncate max-w-[100px] sm:max-w-[120px]">
+                        {ensName ? ensName : `${address.slice(0, 6)}...${address.slice(-4)}`}
+                      </span>
+                    </div>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            }
-            // Render other bottom items normally
-            return (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton
-                  asChild
-                  className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1"
-                >
-                  <Link to={item.url} className="flex items-center space-x-3 px-4">
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-dt-dark-2 border-white/10 text-white w-64" align="end" side="right" sideOffset={10}>
+                  <DropdownMenuLabel className="px-3 py-2">
+                    {activeConnector?.name && <p className="text-xs text-dt-gray-light mb-1">{activeConnector.name}</p>}
+                    {ensName ? `${ensName} (${address.slice(0,4)}...${address.slice(-4)})` : `${address.slice(0,6)}...${address.slice(-4)}`}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10" />
+
+                  <DropdownMenuLabel className="px-3 pt-2 pb-1 text-xs text-dt-gray-light">Recent Activity</DropdownMenuLabel>
+                  {isLoadingTransactions && (
+                    <DropdownMenuItem className="px-3 py-2 flex items-center justify-center cursor-default">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-xs text-dt-gray-light">Loading transactions...</span>
+                    </DropdownMenuItem>
+                  )}
+                  {transactionsError && (
+                     <DropdownMenuItem className="px-3 py-2 flex items-center text-red-400 cursor-default">
+                       <AlertTriangle className="h-4 w-4 mr-2" />
+                       <span className="text-xs">Error loading transactions</span>
+                     </DropdownMenuItem>
+                  )}
+                  {!isLoadingTransactions && !transactionsError && transactions && transactions.length > 0 && (
+                    transactions.map((tx) => (
+                      <DropdownMenuItem key={tx.hash} asChild className="px-3 py-1.5 hover:bg-dt-primary/10 cursor-pointer">
+                        <a href={tx.explorerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between w-full">
+                          <div className="flex flex-col items-start">
+                            <span className="text-xs font-medium text-white truncate max-w-[150px]">{tx.summary}</span>
+                            <span className="text-[10px] text-dt-gray-light">{formatDistanceToNow(tx.date, { addSuffix: true })}</span>
+                          </div>
+                          <ExternalLink className="h-3 w-3 text-dt-gray-light ml-2 shrink-0" />
+                        </a>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                  {!isLoadingTransactions && !transactionsError && (!transactions || transactions.length === 0) && (
+                     <DropdownMenuItem className="px-3 py-2 cursor-default">
+                       <span className="text-xs text-dt-gray-light">No recent transactions.</span>
+                     </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem onClick={() => disconnect()} className="px-3 py-2 hover:bg-dt-primary/20 cursor-pointer">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Disconnect
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <SidebarMenuButton
+                onClick={handleConnect}
+                disabled={isConnectLoading}
+                className="w-full h-12 text-white hover:bg-dt-primary/20 hover:text-dt-primary rounded-xl transition-all duration-200 mb-1 flex items-center space-x-3 px-4"
+              >
+                {isConnectLoading ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 text-white mr-2" />
+                    <span className="font-medium">Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-5 w-5 text-red-400" /> {/* Or Wallet icon */}
+                    <span className="font-medium">Connect Wallet</span>
+                  </>
+                )}
+              </SidebarMenuButton>
+            )}
+          </SidebarMenuItem>
         </SidebarMenu>
 
         <div className="mt-6 p-4 glass-card rounded-xl">
