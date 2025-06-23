@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useContractRead, useContractWrite, useWaitForTransaction } from 'wagmi';
+import { useAccount, useContractRead, useContractWrite, useWaitForTransactionReceipt } from 'wagmi'; // Corrected import
 import { toast } from '@/hooks/use-toast'; // Use ShadCN toast
 
 import MusicNftAbi from '../lib/abi/MusicNFT.json';
