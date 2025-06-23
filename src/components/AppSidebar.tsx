@@ -232,24 +232,6 @@ export function AppSidebar() {
             )}
           </SidebarMenuItem>
         </SidebarMenu>
-
-        <div className="mt-6 p-4 glass-card rounded-xl">
-          <p className="text-dt-gray-light text-sm mb-2">Pro Membership</p>
-          <div className="flex items-center justify-between">
-            <span className="text-white font-medium">Upgrade</span>
-            <button className="bg-dt-primary text-white px-3 py-1 rounded-lg text-sm hover:bg-dt-primary-dark transition-colors">
-              Get Pro
-            </button>
-          </div>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
-  );
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
         
         <div className="mt-6 p-4 glass-card rounded-xl">
           <p className="text-dt-gray-light text-sm mb-2">Pro Membership</p>
