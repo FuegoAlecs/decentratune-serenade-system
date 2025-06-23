@@ -402,69 +402,36 @@ export function useListTrackForSale() {
 
     // Effect to proceed after approval confirmation
     useEffect(() => {
-        if (currentStep === 'approving' && isApproveConfirmed && approvalReceipt) {
-            if (approvalReceipt.status === 'success') {
-                console.log('Approval confirmed. Now calling original listTrack logic to set price.');
-                // Need to re-trigger the listing part of listTrack.
-                // For simplicity, we might need to call a specific internal function here
-                // or the UI could prompt the user to click "List" again, now that approval is done.
-                // A more robust solution would be to have listTrack be able to resume.
-                // For now, let's assume the user might need to re-initiate or the UI handles this state.
-                // The ideal way is to have the listTrack function be callable in stages or pass parameters to it.
-                // Let's try to call setTrackPrice part directly.
-                // This requires tokenId and priceWei to be available here, or passed differently.
-                // This part is tricky with async flow within a single hook call.
-                // A simple way for now: UI can observe currentStep and if it's 'approved_ready_to_list', then enable list button again.
-                // OR: We can try to get tokenId and priceEth from a shared state or re-call a part of the function.
-                // For this iteration, we'll log success and the UI should ideally react to `isApproveConfirmed`
-                // and then allow the user to click a "Finalize Listing" button or automatically proceed.
-                // Let's assume for now the listTrack function is called again by the UI if currentStep became 'needsApproval'
-                // and then 'approving' and then 'isApproveConfirmed' is true.
-                // To make it more automatic:
-                // We need to store tokenId and priceEth from the initial call to use them here.
-                // This requires making them part of the hook's state or passing them around.
-                // This is getting complex for a single hook.
-                // A simpler model: listTrack only does one thing. UI calls approve, then calls list.
-                // But the request was to make it full. So, we need to manage this flow.
-
-                // Let's assume `listTrack` will be called again by the component if approval was the step.
-                // Or, better, we make `listTrack` callable with a state that it should check approval OR list.
-                // For now, the current `listTrack` will re-check approval and find it's approved.
-                // This means the UI has to call `listTrack` again if `currentStep` was `needsApproval`.
-                // This is not ideal.
-
-                // A better way:
-                // When listTrack is called:
-                // 1. Check approval.
-                // 2. If not approved, call approve. SET A FLAG `approvalAttempted = true`. Return.
-                // 3. useEffect watches for `isApproveConfirmed`. If true AND `approvalAttempted` is true, THEN call the listing part.
-                // This implies `tokenId` and `priceWei` need to be stored in the hook's state.
-
-                // For now, let's simplify: the `listTrack` function will be structured to be called, and if it hits approval,
-                // it will set `approvalHash`. The UI will see `isApproveConfirming` and `isApproveConfirmed`.
-                // If `isApproveConfirmed` becomes true, the UI should re-trigger `listTrack` with the same params.
-                // The second call to `listTrack` will find it's approved and proceed to listing.
-                // This is a common pattern if not using a state machine library.
-
-                // Let's make the hook itself re-trigger the listing part after successful approval.
-                // This requires storing tokenId and priceEth in state.
-                // This will be done in a follow-up refinement if this structure is too clunky.
-                // For now, the log indicates success and the next call to `listTrack` will proceed.
-                setCurrentStep("listing"); // Indicate ready for listing or listing has started
-                // The main `listTrack` function, if called again, will now find approval.
-                // Or, the UI can react to `isApproveConfirmed` and `currentStep === 'approving'`
-                // to then call the `setTrackPriceOnSaleContract` part. This is cleaner.
+        if (currentStep === 'approving' && isApproveConfirmed) {
+            if (approveReceipt) { // Explicitly check if approveReceipt is defined
+                if (approveReceipt.status === 'success') {
+                    console.log('Approval confirmed. UI should now enable proceeding to listing, or listTrack can be called again.');
+                    // For now, setting step to 'listing' which implies the next call to listTrack will proceed.
+                    // A more sophisticated state machine or callback could make this smoother.
+                    // Ideally, the original tokenId and priceEth are stored in state to be used here
+                    // to automatically call the setTrackPriceOnSaleContract part.
+                    // This is a placeholder for that more advanced logic.
+                    // If the UI is designed to call listTrack() again after seeing isApproveConfirmed,
+                    // then this step simply signals the approval is done.
+                    setCurrentStep("listing"); // Or a new state like "approved_ready_to_list"
+                } else {
+                     console.error("Approval transaction reverted on-chain.");
+                     setOperationError(new Error("NFT Approval transaction failed (reverted)."));
+                     setCurrentStep("error");
+                }
             } else {
-                 console.error("Approval transaction reverted.");
-                 setOperationError(new Error("NFT Approval transaction failed."));
-                 setCurrentStep("error");
+                // This case should ideally not be reached if isApproveConfirmed is true.
+                // It suggests an issue with wagmi's hook state or an unexpected sequence.
+                console.error("useListTrackForSale: approveReceipt is undefined even though isApproveConfirmed is true. This is an unexpected state.");
+                setOperationError(new Error("Approval data missing despite confirmation. Please retry."));
+                setCurrentStep("error");
             }
         } else if (currentStep === 'approving' && approveConfirmationError) {
-            console.error("Approval confirmation error:", approveConfirmationError);
-            setOperationError(approveConfirmationError);
+            console.error("Approval confirmation error (useWaitForTransactionReceipt):", approveConfirmationError);
+            setOperationError(new Error(`Approval failed: ${approveConfirmationError.message}`));
             setCurrentStep("error");
         }
-    }, [isApproveConfirmed, approveConfirmationError, approvalReceipt, currentStep]);
+    }, [isApproveConfirmed, approveConfirmationError, approveReceipt, currentStep]); // Ensure all dependencies are listed
 
     useEffect(() => {
         if (currentStep === 'listing' && isListingConfirmed && listingReceipt) {
