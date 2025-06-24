@@ -1,6 +1,16 @@
-import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2, HandCoins } from "lucide-react"; // Added HandCoins
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; // For price input
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // For Tip Modal
 import { useState, useEffect } from "react";
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
@@ -10,7 +20,8 @@ import {
     useGetListing,
     useListTrackForSale,
     useDelistTrack,
-    useBuyTrack
+    useBuyTrack,
+    useTipArtist // Import the useTipArtist hook
 } from "@/hooks/contracts"; // Import the new hooks
 import { useToast } from "@/components/ui/use-toast"; // For notifications
 
@@ -44,6 +55,8 @@ export function TrackCard({
   const [showConfetti, setShowConfetti] = useState(false);
   const [showPriceInput, setShowPriceInput] = useState(false);
   const [listPriceEth, setListPriceEth] = useState("");
+  const [showTipDialog, setShowTipDialog] = useState(false); // State for tip dialog
+  const [tipAmountEth, setTipAmountEth] = useState(""); // State for tip amount
 
   const { playTrack, currentTrack, isPlaying, isLoading: isAudioLoading } = useAudio();
   const { address: connectedAddress } = useAccount();
@@ -56,18 +69,33 @@ export function TrackCard({
   const { listTrack, isListPending, isConfirmingList, listError, isListConfirmed } = useListTrackForSale();
   const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
   const { buyTrack, isBuyPending, isConfirmingBuy, buyError, isBuyConfirmed } = useBuyTrack();
+  const { tipArtist, isTipPending, isConfirmingTip, isTipConfirmed, tipError: tipArtistError } = useTipArtist(); // Tip artist hook
 
   const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy;
+  const isProcessingTip = isTipPending || isConfirmingTip;
 
   useEffect(() => {
     if (isListConfirmed || isDelistConfirmed || isBuyConfirmed) {
       toast({ title: "Transaction Confirmed", description: "Your transaction has been confirmed." });
-      refetchListing();
+      refetchListing(); // Assuming this is relevant for listing/delisting/buying
     }
     if (listError) toast({ title: "Listing Error", description: listError.message, variant: "destructive" });
     if (delistError) toast({ title: "Delisting Error", description: delistError.message, variant: "destructive" });
     if (buyError) toast({ title: "Purchase Error", description: buyError.message, variant: "destructive" });
-  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError, toast, refetchListing]);
+
+    // Tip related toasts
+    if (isTipConfirmed) {
+      toast({ title: "Tip Sent!", description: `Successfully sent ${tipAmountEth} ETH to ${artist}.` });
+      setShowTipDialog(false);
+      setTipAmountEth("");
+    }
+    if (tipArtistError) {
+      toast({ title: "Tip Error", description: tipArtistError.message, variant: "destructive" });
+    }
+  }, [
+    isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError,
+    isTipConfirmed, tipArtistError, toast, refetchListing, tipAmountEth, artist
+  ]);
 
   const isCurrentTrackPlaying = currentTrack?.id === id && isPlaying;
   const isCurrentTrackLoading = currentTrack?.id === id && isAudioLoading;
@@ -262,6 +290,22 @@ export function TrackCard({
                 <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
               </Button>
 
+              {/* Tip Button */}
+              {isNFT && ownerAddress && ownerAddress.toLowerCase() !== connectedAddress?.toLowerCase() && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    console.log("Opening tip dialog for owner:", ownerAddress);
+                    setShowTipDialog(true);
+                  }}
+                  className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary hover:scale-110 transition-all duration-200 p-1.5 sm:p-2"
+                  aria-label="Tip artist"
+                >
+                  <HandCoins className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* Sale related buttons */}
               {isNFT && connectedAddress && isOwned && !showPriceInput && (
                 <>
@@ -307,6 +351,61 @@ export function TrackCard({
           </div> {/* Closes column for price input and buttons */}
         </div> {/* Closes L2 Div for duration/plays AND buttons area */}
       </div> {/* Closes L1 Outer Track Info div */}
+
+      {/* Tip Dialog */}
+      <Dialog open={showTipDialog} onOpenChange={setShowTipDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Send a Tip to {artist}</DialogTitle>
+            <DialogDescription>
+              Show your appreciation for the track "{title}".
+              {ownerAddress && <p className="text-xs text-muted-foreground mt-1">Recipient: {ownerAddress.slice(0,6)}...{ownerAddress.slice(-4)}</p>}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="tip-amount" className="text-right col-span-1">
+                Amount
+              </label>
+              <Input
+                id="tip-amount"
+                type="number"
+                placeholder="0.01 ETH"
+                value={tipAmountEth}
+                onChange={(e) => setTipAmountEth(e.target.value)}
+                className="col-span-3"
+                disabled={isProcessingTip}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isProcessingTip}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              onClick={async () => {
+                if (!ownerAddress) {
+                  toast({ title: "Error", description: "Owner address not found.", variant: "destructive" });
+                  return;
+                }
+                const amount = parseFloat(tipAmountEth);
+                if (isNaN(amount) || amount <= 0) {
+                  toast({ title: "Invalid Amount", description: "Please enter a valid positive amount to tip.", variant: "destructive" });
+                  return;
+                }
+                await tipArtist(ownerAddress as `0x${string}`, tipAmountEth);
+              }}
+              disabled={isProcessingTip || !tipAmountEth}
+            >
+              {isProcessingTip ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Send Tip
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div> // Closes main component div
   );
 }
