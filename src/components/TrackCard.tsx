@@ -1,10 +1,10 @@
-import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; // For price input
 import { useState, useEffect } from "react";
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
-import { useAccount } from "wagmi";
+import { useAccount, useContractRead, usePrepareContractWrite, useContractWrite, useWaitForTransaction } from "wagmi";
 import { formatEther, parseEther } from "ethers"; // viem's formatEther, parseEther
 import {
     useGetListing,
@@ -14,8 +14,34 @@ import {
 } from "@/hooks/contracts"; // Import the new hooks
 import { useToast } from "@/components/ui/use-toast"; // For notifications
 
+// Placeholder - this should ideally come from a config file or environment variable
+const TRACK_SALE_CONTRACT_ADDRESS = "0xYourTrackSaleContractAddressHere" as `0x${string}`;
+
+// Minimal ABI for ERC721/ERC1155 isApprovedForAll and setApprovalForAll
+const erc721ApprovalAbi = [
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "address", "name": "operator", "type": "address" }
+    ],
+    "name": "isApprovedForAll",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view", "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "operator", "type": "address" },
+      { "internalType": "bool", "name": "approved", "type": "bool" }
+    ],
+    "name": "setApprovalForAll",
+    "outputs": [],
+    "stateMutability": "nonpayable", "type": "function"
+  }
+] as const;
+
 interface TrackCardProps {
   id: string; // Token ID (tokenId)
+  musicNftAddress: `0x${string}`; // Address of the NFT contract
   title: string;
   artist: string;
   ownerAddress?: string;
@@ -29,6 +55,7 @@ interface TrackCardProps {
 
 export function TrackCard({
   id,
+  musicNftAddress,
   title,
   artist,
   ownerAddress,
@@ -46,10 +73,25 @@ export function TrackCard({
   const [listPriceEth, setListPriceEth] = useState("");
 
   const { playTrack, currentTrack, isPlaying, isLoading: isAudioLoading } = useAudio();
-  const { address: connectedAddress } = useAccount();
+  const { address: connectedAddress, isConnected } = useAccount();
   const { toast } = useToast();
 
   const isOwned = !!connectedAddress && !!ownerAddress && connectedAddress.toLowerCase() === ownerAddress.toLowerCase();
+
+  // Approval status for TrackSale operator
+  const {
+    data: isOperatorApproved,
+    isLoading: isLoadingApprovalStatus,
+    error: errorApprovalStatus,
+    refetch: refetchApprovalStatus
+  } = useContractRead({
+    address: musicNftAddress,
+    abi: erc721ApprovalAbi,
+    functionName: 'isApprovedForAll',
+    args: [connectedAddress!, TRACK_SALE_CONTRACT_ADDRESS],
+    enabled: isConnected && !!connectedAddress && isOwned && !!musicNftAddress, // Only run if connected, owner, and NFT address is valid
+    watch: true,
+  });
 
   const { data: listingPriceWei, isLoading: isLoadingListing, refetch: refetchListing } = useGetListing(id);
 
@@ -57,17 +99,71 @@ export function TrackCard({
   const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
   const { buyTrack, isBuyPending, isConfirmingBuy, buyError, isBuyConfirmed } = useBuyTrack();
 
-  const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy;
+  // --- Approve Operator Logic ---
+  const { config: approveConfig, error: prepareApproveError } = usePrepareContractWrite({
+    address: musicNftAddress,
+    abi: erc721ApprovalAbi,
+    functionName: 'setApprovalForAll',
+    args: [TRACK_SALE_CONTRACT_ADDRESS, true],
+    enabled: isConnected && isOwned && musicNftAddress && isOperatorApproved === false,
+  });
+  const { data: approveData, write: approveMarketplace, isLoading: isApprovingMarketplace, error: approveError } = useContractWrite(approveConfig);
+  const { isLoading: isWaitingForApproveTx, isSuccess: isApproveSuccess, error: approveTxError } = useWaitForTransaction({
+    hash: approveData?.hash,
+    onSuccess: () => {
+      toast({ title: "Approval Successful", description: "Marketplace is now approved." });
+      refetchApprovalStatus();
+    },
+    onError: (err) => {
+      toast({ title: "Approval Error", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const isProcessingApproval = isApprovingMarketplace || isWaitingForApproveTx;
+  const approvalHookError = prepareApproveError || approveError || approveTxError;
+  // --- End Approve Operator Logic ---
+
+  // --- Revoke Operator Logic ---
+  const { config: revokeConfig, error: prepareRevokeError } = usePrepareContractWrite({
+    address: musicNftAddress,
+    abi: erc721ApprovalAbi,
+    functionName: 'setApprovalForAll',
+    args: [TRACK_SALE_CONTRACT_ADDRESS, false],
+    enabled: isConnected && isOwned && musicNftAddress && isOperatorApproved === true,
+  });
+  const { data: revokeData, write: revokeMarketplace, isLoading: isRevokingMarketplace, error: revokeError } = useContractWrite(revokeConfig);
+  const { isLoading: isWaitingForRevokeTx, isSuccess: isRevokeSuccess, error: revokeTxError } = useWaitForTransaction({
+    hash: revokeData?.hash,
+    onSuccess: () => {
+      toast({ title: "Revoke Successful", description: "Marketplace approval has been revoked." });
+      refetchApprovalStatus();
+    },
+    onError: (err) => {
+      toast({ title: "Revoke Error", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const isProcessingRevoke = isRevokingMarketplace || isWaitingForRevokeTx;
+  const revokeHookError = prepareRevokeError || revokeError || revokeTxError;
+  // --- End Revoke Operator Logic ---
+
+  const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy || isProcessingApproval || isProcessingRevoke;
 
   useEffect(() => {
     if (isListConfirmed || isDelistConfirmed || isBuyConfirmed) {
       toast({ title: "Transaction Confirmed", description: "Your transaction has been confirmed." });
       refetchListing();
     }
+    // Errors for listing/delisting/buying are handled by individual hooks if they set specific error states
+    // For now, relying on the toast notifications from the hooks themselves or the generic tx error.
     if (listError) toast({ title: "Listing Error", description: listError.message, variant: "destructive" });
     if (delistError) toast({ title: "Delisting Error", description: delistError.message, variant: "destructive" });
     if (buyError) toast({ title: "Purchase Error", description: buyError.message, variant: "destructive" });
-  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError, toast, refetchListing]);
+    if (approvalHookError) toast({ title: "Approve Action Error", description: approvalHookError.message, variant: "destructive"})
+    if (revokeHookError) toast({ title: "Revoke Action Error", description: revokeHookError.message, variant: "destructive"})
+
+
+  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError, approvalHookError, revokeHookError, toast, refetchListing]);
 
   const isCurrentTrackPlaying = currentTrack?.id === id && isPlaying;
   const isCurrentTrackLoading = currentTrack?.id === id && isAudioLoading;
@@ -302,6 +398,40 @@ export function TrackCard({
                   <Coins className="h-3 w-3 mr-1" />
                   Mint
                 </Button>
+              )}
+
+              {/* Approve/Revoke Marketplace Button */}
+              {isNFT && isConnected && isOwned && musicNftAddress && TRACK_SALE_CONTRACT_ADDRESS !== "0xYourTrackSaleContractAddressHere" && (
+                <>
+                  {isLoadingApprovalStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {!isLoadingApprovalStatus && errorApprovalStatus && (
+                    <span className="text-xs text-red-500">Error loading approval</span>
+                  )}
+                  {!isLoadingApprovalStatus && !errorApprovalStatus && isOperatorApproved === false && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                      onClick={() => approveMarketplace?.()}
+                      disabled={isProcessingTx || !approveMarketplace || !!prepareApproveError}
+                    >
+                      {isProcessingApproval ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                      Approve Marketplace
+                    </Button>
+                  )}
+                  {!isLoadingApprovalStatus && !errorApprovalStatus && isOperatorApproved === true && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 border-red-500 text-red-500 hover:bg-red-500/10"
+                      onClick={() => revokeMarketplace?.()}
+                      disabled={isProcessingTx || !revokeMarketplace || !!prepareRevokeError}
+                    >
+                      {isProcessingRevoke ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShieldOff className="h-3 w-3 mr-1" />}
+                      Revoke Approval
+                    </Button>
+                  )}
+                </>
               )}
             </div> {/* Closes buttons row */}
           </div> {/* Closes column for price input and buttons */}
