@@ -1,7 +1,8 @@
-import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2, Gift } from "lucide-react"; // Added Gift
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; // For price input
 import { useState, useEffect } from "react";
+import { TipModal } from "./TipModal"; // Import TipModal
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
@@ -44,6 +45,7 @@ export function TrackCard({
   const [showConfetti, setShowConfetti] = useState(false);
   const [showPriceInput, setShowPriceInput] = useState(false);
   const [listPriceEth, setListPriceEth] = useState("");
+  const [isTipModalOpen, setIsTipModalOpen] = useState(false); // State for TipModal
 
   const { playTrack, currentTrack, isPlaying, isLoading: isAudioLoading } = useAudio();
   const { address: connectedAddress } = useAccount();
@@ -253,7 +255,7 @@ export function TrackCard({
               </div>
             )}
 
-            <div className="flex items-center space-x-1 sm:space-x-2 self-end"> {/* Removed sm:self-center to align with potential full-width input */}
+            <div className="flex items-center space-x-1 sm:space-x-2 self-end"> {/* Buttons row */}
               <Button
                 variant="ghost" size="icon" onClick={handleLike}
                 className={`${liked ? 'text-red-500 scale-110' : 'text-light-text-secondary dark:text-dark-text-secondary'} hover:text-red-500 hover:scale-110 transition-all duration-200 p-1.5 sm:p-2`}
@@ -261,6 +263,18 @@ export function TrackCard({
               >
                 <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
               </Button>
+
+              {/* Tip Button: Shown if it's an NFT, an ownerAddress (artist) is provided, and not owned by the connected user */}
+              {isNFT && ownerAddress && connectedAddress && ownerAddress.toLowerCase() !== connectedAddress.toLowerCase() && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => setIsTipModalOpen(true)}
+                  className="text-light-text-secondary dark:text-dark-text-secondary hover:text-green-500 hover:scale-110 transition-all duration-200 p-1.5 sm:p-2"
+                  aria-label="Tip Artist"
+                >
+                  <Gift className="h-4 w-4" />
+                </Button>
+              )}
 
               {/* Sale related buttons */}
               {isNFT && connectedAddress && isOwned && !showPriceInput && (
@@ -307,6 +321,16 @@ export function TrackCard({
           </div> {/* Closes column for price input and buttons */}
         </div> {/* Closes L2 Div for duration/plays AND buttons area */}
       </div> {/* Closes L1 Outer Track Info div */}
+
+      {/* Tip Modal */}
+      {ownerAddress && ( // Ensure ownerAddress is available before rendering TipModal
+        <TipModal
+          artistAddress={ownerAddress} // Assuming ownerAddress is the original minter/artist
+          trackName={title}
+          isOpen={isTipModalOpen}
+          onClose={() => setIsTipModalOpen(false)}
+        />
+      )}
     </div> // Closes main component div
   );
 }
