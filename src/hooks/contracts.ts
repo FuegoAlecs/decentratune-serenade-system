@@ -448,7 +448,8 @@ export function useListTrackForSale() {
             setCurrentStep("listing");
             console.log(`[useListTrackForSale] Step: listing. Proceeding to list token ${tokenIdToProcess.toString()} for ${priceWeiToProcess.toString()} wei.`);
             const setPriceArgs: readonly [bigint, bigint] = [tokenIdToProcess, priceWeiToProcess];
-            console.log(`[useListTrackForSale] Calling setTrackPriceOnSaleContract with args: ${JSON.stringify(setPriceArgs)}`);
+            // Safe logging for BigInt array
+            console.log(`[useListTrackForSale] Calling setTrackPriceOnSaleContract with tokenId: ${setPriceArgs[0].toString()}, priceWei: ${setPriceArgs[1].toString()}`);
             const listTxHash = await setTrackPriceOnSaleContract({
                 address: trackSaleV2ContractAddress!, // Added non-null assertion
                 abi: trackSaleV2Abi,
