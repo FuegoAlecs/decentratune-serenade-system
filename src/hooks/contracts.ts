@@ -668,14 +668,14 @@ export function useGetListing(tokenId?: string) {
                 // Handle cases where the contract might revert if token doesn't exist or other errors
                 // For example, if getPrice reverts for a non-listed token instead of returning 0.
                 // The current ABI implies it returns 0 for non-listed, but good to be safe.
-                console.warn(`Could not fetch listing for token ${tokenId}: ${e.message}`);
+                console.error(`[useGetListing] Error fetching price for token ${tokenId}:`, e); // Enhanced logging
                 return null; // Treat as not listed on error
             }
         },
         // Fetching public price data should not strictly depend on a connected account.
         // It will run if publicClient, contractAddress, and tokenId are available.
         // The hook will refetch if any part of its queryKey (including tokenId) changes.
-        enabled: !!publicClient && !!trackSaleV2ContractAddress && !!tokenId,
+        enabled: !!publicClient && !!trackSaleV2ContractAddress && !!tokenId && typeof tokenId === 'string' && tokenId.trim() !== "", // Ensure tokenId is valid for enabling query
         staleTime: 1000 * 60 * 1, // 1 minute stale time
         // refetchInterval: 1000 * 30, // Optional: more frequent refetching for price updates
     });
