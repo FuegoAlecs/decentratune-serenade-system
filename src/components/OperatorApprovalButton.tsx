@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { type Address, readContract as viemReadContract } from 'viem'; // Added viemReadContract
+import { type Address } from 'viem';
 import {
   useAccount,
-  useChainId,
-  usePublicClient, // Added usePublicClient
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt
@@ -32,9 +30,6 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
   console.log('  userAddress (owner):', userAddress);
 
   const { address: connectedWalletAddress } = useAccount(); // Wallet connected to the dapp
-  const currentChainId = useChainId();
-  console.log('Current wagmi chainId:', currentChainId);
-  console.log('Expected Sepolia chainId:', 11155111);
 
   // State for the approval transaction hash
   const [approvalTxHash, setApprovalTxHash] = useState<Address | undefined>(undefined);
@@ -72,40 +67,6 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
   } = useWaitForTransactionReceipt({
     hash: approvalTxHash,
   });
-
-  // Effect to log approval status updates
-  useEffect(() => {
-    console.log('Approval Hook Update:');
-    console.log('  isLoading:', isLoadingApprovalStatus);
-    console.log('  error:', errorLoadingApprovalStatus);
-    console.log('  isCurrentlyApproved (data):', isCurrentlyApproved);
-  }, [isLoadingApprovalStatus, errorLoadingApprovalStatus, isCurrentlyApproved]);
-
-  // Effect for direct viem call
-  const publicClient = usePublicClient();
-  useEffect(() => {
-    if (publicClient && musicNftAddress && userAddress && trackSaleAddress && currentChainId === 11155111) {
-      const fetchApprovalDirectly = async () => {
-        try {
-          console.log('%cAttempting direct viem readContract...', 'color: blue; font-weight: bold;');
-          const result = await viemReadContract(publicClient, {
-            address: musicNftAddress,
-            abi: MusicNftAbi.abi,
-            functionName: 'isApprovedForAll',
-            args: [userAddress, trackSaleAddress],
-          });
-          console.log('%cDirect viem readContract result:', 'color: blue; font-weight: bold;', result);
-        } catch (e) {
-          console.error('%cDirect viem readContract error:', 'color: red; font-weight: bold;', e);
-        }
-      };
-      // Only run this once when conditions are met, or if specific dependencies change
-      // For now, let's run it if key addresses change to see if that helps trigger it.
-      // This might run multiple times if parent component re-renders often with same props.
-      // A more sophisticated condition or a manual trigger might be better in a non-debug scenario.
-      fetchApprovalDirectly();
-    }
-  }, [publicClient, musicNftAddress, userAddress, trackSaleAddress, currentChainId]);
 
   // Effect to update tx hash for useWaitForTransactionReceipt
   useEffect(() => {
@@ -175,6 +136,14 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
     return <div className={className}>Required addresses not provided for approval component.</div>;
   }
 
+  if (errorLoadingApprovalStatus) {
+    return (
+      <div className={`text-red-500 ${className}`}>
+        Error loading approval status: {errorLoadingApprovalStatus.message}
+      </div>
+    );
+  }
+
   return (
     <div className={`p-4 border rounded-lg space-y-3 ${className}`}>
       <h3 className="font-semibold text-lg">Marketplace Operator Approval</h3>
@@ -183,18 +152,13 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
       <div>
         <span className="text-sm font-medium">Current Status: </span>
         {isLoadingApprovalStatus && <Loader2 className="h-4 w-4 animate-spin inline-block ml-2" />}
-        {!isLoadingApprovalStatus && errorLoadingApprovalStatus && (
-            <span className="text-red-500 font-semibold">
-              Error: {errorLoadingApprovalStatus.shortMessage || errorLoadingApprovalStatus.message}
-            </span>
-        )}
-        {!isLoadingApprovalStatus && !errorLoadingApprovalStatus && isCurrentlyApproved !== undefined && (
+        {!isLoadingApprovalStatus && isCurrentlyApproved !== undefined && (
           <span className={isCurrentlyApproved ? 'text-green-600 font-semibold' : 'text-orange-600 font-semibold'}>
             {isCurrentlyApproved ? 'Approved' : 'Not Approved'}
           </span>
         )}
-         {!isLoadingApprovalStatus && !errorLoadingApprovalStatus && isCurrentlyApproved === undefined && (
-            <span className="text-gray-500">Unknown (ensure correct network/params & owner)</span>
+         {!isLoadingApprovalStatus && isCurrentlyApproved === undefined && (
+            <span className="text-gray-500">Unknown (possibly wrong network or parameters)</span>
         )}
       </div>
 
