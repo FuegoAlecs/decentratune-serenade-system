@@ -68,6 +68,14 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
     hash: approvalTxHash,
   });
 
+  // Effect to log approval status updates
+  useEffect(() => {
+    console.log('Approval Hook Update:');
+    console.log('  isLoading:', isLoadingApprovalStatus);
+    console.log('  error:', errorLoadingApprovalStatus);
+    console.log('  isCurrentlyApproved (data):', isCurrentlyApproved);
+  }, [isLoadingApprovalStatus, errorLoadingApprovalStatus, isCurrentlyApproved]);
+
   // Effect to update tx hash for useWaitForTransactionReceipt
   useEffect(() => {
     if (writeApprovalData?.hash) {
