@@ -10,12 +10,16 @@ import { formatEther, Address } from "ethers";
 import { useToast } from "@/hooks/use-toast";
 import { ipfsToHttp } from "@/lib/utils"; // Import the helper
 import { TrackCard } from "@/components/TrackCard"; // Import TrackCard
+import { OperatorApprovalButton } from "@/components/OperatorApprovalButton"; // Import the new component
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
 import tipJarAbi from "@/lib/abi/TipJar.json";
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
+// Define trackSaleAddress (as it's hardcoded in contracts.ts and TrackDetails.tsx for now)
+// TODO: Centralize this address if it becomes configurable via .env as well
+const trackSaleAddress = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address;
 
 // Interface for NFT metadata (can be shared or defined per component if structures vary)
 interface NftMetadata {
@@ -335,6 +339,18 @@ export default function Profile() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-6 sm:p-6">
+        {/* Marketplace Settings Section - Visible only on own profile */}
+        {connectedAddress && profileAddress && connectedAddress.toLowerCase() === profileAddress.toLowerCase() && (
+          <div className="mb-8 p-4 sm:p-6 border border-white/10 rounded-lg glass-card">
+            <h2 className="text-xl font-satoshi font-semibold mb-4">Marketplace Settings</h2>
+            <OperatorApprovalButton
+              musicNftAddress={musicNftContractAddress}
+              trackSaleAddress={trackSaleAddress}
+              userAddress={connectedAddress} // Since this is user's own profile, userAddress is connectedAddress
+            />
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
           <Button variant={activeTab === "owned" ? "default" : "ghost"} onClick={() => setActiveTab("owned")} className="flex items-center space-x-2"> <Music className="h-4 w-4" /> <span>Owned Tracks</span> </Button>
           {isArtistProfile && ( <Button variant={activeTab === "uploaded" ? "default" : "ghost"} onClick={() => setActiveTab("uploaded")} className="flex items-center space-x-2"> <Upload className="h-4 w-4" /> <span>My Uploads</span> </Button> )}
