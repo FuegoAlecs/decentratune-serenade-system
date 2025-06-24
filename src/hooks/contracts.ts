@@ -418,7 +418,8 @@ export function useListTrackForSale() {
                 setCurrentStep("needsApproval");
                 console.log(`[useListTrackForSale] Step: needsApproval. Single token approval needed for token ID: ${localTokenIdBigInt}. Requesting approval...`);
                 const approveArgs: readonly [`0x${string}`, bigint] = [trackSaleV2ContractAddress!, localTokenIdBigInt];
-                console.log(`[useListTrackForSale] Calling approveMusicNft with args: ${JSON.stringify(approveArgs)}`);
+                // Safe logging for BigInt array
+                console.log(`[useListTrackForSale] Calling approveMusicNft with spender: ${approveArgs[0]}, tokenId: ${approveArgs[1].toString()}`);
                 const approveTxHash = await approveMusicNft({
                     address: musicNftContractAddress!, // Added non-null assertion
                     abi: musicNftAbi,
