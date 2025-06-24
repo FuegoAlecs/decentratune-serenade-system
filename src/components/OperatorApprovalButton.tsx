@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { type Address } from 'viem';
+import { type Address, readContract as viemReadContract } from 'viem'; // Added viemReadContract
 import {
   useAccount,
-  useChainId, // Added useChainId
+  useChainId,
+  usePublicClient, // Added usePublicClient
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt
@@ -79,6 +80,32 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
     console.log('  error:', errorLoadingApprovalStatus);
     console.log('  isCurrentlyApproved (data):', isCurrentlyApproved);
   }, [isLoadingApprovalStatus, errorLoadingApprovalStatus, isCurrentlyApproved]);
+
+  // Effect for direct viem call
+  const publicClient = usePublicClient();
+  useEffect(() => {
+    if (publicClient && musicNftAddress && userAddress && trackSaleAddress && currentChainId === 11155111) {
+      const fetchApprovalDirectly = async () => {
+        try {
+          console.log('%cAttempting direct viem readContract...', 'color: blue; font-weight: bold;');
+          const result = await viemReadContract(publicClient, {
+            address: musicNftAddress,
+            abi: MusicNftAbi.abi,
+            functionName: 'isApprovedForAll',
+            args: [userAddress, trackSaleAddress],
+          });
+          console.log('%cDirect viem readContract result:', 'color: blue; font-weight: bold;', result);
+        } catch (e) {
+          console.error('%cDirect viem readContract error:', 'color: red; font-weight: bold;', e);
+        }
+      };
+      // Only run this once when conditions are met, or if specific dependencies change
+      // For now, let's run it if key addresses change to see if that helps trigger it.
+      // This might run multiple times if parent component re-renders often with same props.
+      // A more sophisticated condition or a manual trigger might be better in a non-debug scenario.
+      fetchApprovalDirectly();
+    }
+  }, [publicClient, musicNftAddress, userAddress, trackSaleAddress, currentChainId]);
 
   // Effect to update tx hash for useWaitForTransactionReceipt
   useEffect(() => {
