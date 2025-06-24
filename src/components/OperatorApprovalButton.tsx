@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { type Address } from 'viem';
 import {
   useAccount,
+  useChainId, // Added useChainId
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt
@@ -30,6 +31,9 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
   console.log('  userAddress (owner):', userAddress);
 
   const { address: connectedWalletAddress } = useAccount(); // Wallet connected to the dapp
+  const currentChainId = useChainId();
+  console.log('Current wagmi chainId:', currentChainId);
+  console.log('Expected Sepolia chainId:', 11155111);
 
   // State for the approval transaction hash
   const [approvalTxHash, setApprovalTxHash] = useState<Address | undefined>(undefined);
