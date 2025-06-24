@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
 import { useAccount, useContractRead, usePrepareContractWrite, useContractWrite, useWaitForTransaction } from "wagmi";
-import { formatEther, parseEther } from "ethers"; // viem's formatEther, parseEther
+import { formatEther, parseEther } from "viem"; // Switched to viem for better bundler compatibility
 import {
     useGetListing,
     useListTrackForSale,
