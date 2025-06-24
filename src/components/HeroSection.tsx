@@ -14,17 +14,7 @@ export function HeroSection() {
     >
       {/* Mobile first: padding and text size for small screens. Breakpoints for larger screens. */}
       <div className="max-w-4xl mx-auto text-center">
-        <div className="mb-4 md:mb-6">
-          {/* Badge styling with new theme colors */}
-          <span
-            className="inline-block bg-light-accent-primary/10 dark:bg-dark-accent-primary/20
-                       text-light-accent-primary dark:text-dark-accent-primary
-                       px-3 py-1 md:px-4 md:py-2 rounded-full
-                       text-xs sm:text-sm font-medium mb-3 md:mb-4"
-          >
-            🎵 Web3 Music Revolution
-          </span>
-        </div>
+        {/* Badge removed as per user request */}
         
         {/* Headline uses new text colors */}
         <h1

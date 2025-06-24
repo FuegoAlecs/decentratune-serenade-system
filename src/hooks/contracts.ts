@@ -355,20 +355,38 @@ export function useListTrackForSale() {
 
         try {
             setCurrentStep("checkingApproval");
-            console.log(`Checking approval for token ID: ${tokenId} to spender: ${trackSaleV2ContractAddress}`);
+
+            // 1. Check isApprovedForAll first
+            console.log(`Checking isApprovedForAll for owner ${connectedAddress} to operator ${trackSaleV2ContractAddress}`);
+            const isOperatorApproved = await publicClient.readContract({
+                address: musicNftContractAddress,
+                abi: musicNftAbi,
+                functionName: 'isApprovedForAll',
+                args: [connectedAddress, trackSaleV2ContractAddress],
+            });
+            console.log(`isApprovedForAll status: ${isOperatorApproved}`);
+
+            if (isOperatorApproved) {
+                console.log("Operator is approved. Proceeding directly to listing.");
+                await _proceedToListing(localTokenIdBigInt, localPriceWei);
+                return;
+            }
+
+            // 2. If not operator approved, check for single token approval
+            console.log(`Operator not globally approved. Checking single token approval for token ID: ${tokenId} to spender: ${trackSaleV2ContractAddress}`);
             const approvedAddress = await publicClient.readContract({
                 address: musicNftContractAddress,
                 abi: musicNftAbi,
                 functionName: 'getApproved',
                 args: [localTokenIdBigInt],
             });
-            console.log(`Current approved address for token ${tokenId}: ${approvedAddress}`);
+            console.log(`Current single-token approved address for token ${tokenId}: ${approvedAddress}`);
 
-            const isAlreadyApproved = approvedAddress?.toLowerCase() === trackSaleV2ContractAddress.toLowerCase();
+            const isSingleTokenApproved = approvedAddress?.toLowerCase() === trackSaleV2ContractAddress.toLowerCase();
 
-            if (!isAlreadyApproved) {
+            if (!isSingleTokenApproved) {
                 setCurrentStep("needsApproval");
-                console.log(`Approval needed for token ID: ${tokenId}. Requesting approval...`);
+                console.log(`Single token approval needed for token ID: ${tokenId}. Requesting approval...`);
 
                 const approveTxHash = await approveMusicNft({
                     address: musicNftContractAddress,

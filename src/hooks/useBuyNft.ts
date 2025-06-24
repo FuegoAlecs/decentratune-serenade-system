@@ -66,7 +66,7 @@ export const useBuyNft = ({
     };
   }, [approvalData]);
 
-  const { isLoading: isConfirmingApproval, isSuccess: isConfirmedApproval } = useWaitForTransaction({
+  const { isLoading: isConfirmingApproval, isSuccess: isConfirmedApproval } = useWaitForTransactionReceipt({
     hash: approvalTxHash,
     onSuccess: (data) => {
       toast({ title: "Approval Confirmed", description: "Sale contract approved successfully.", variant: "default" });
@@ -103,7 +103,7 @@ export const useBuyNft = ({
     };
   }, [buyData]);
 
-  const { isLoading: isConfirmingBuy, isSuccess: isConfirmedBuy } = useWaitForTransaction({
+  const { isLoading: isConfirmingBuy, isSuccess: isConfirmedBuy } = useWaitForTransactionReceipt({
     hash: buyTxHash,
     onSuccess: (data) => {
       toast({ title: "Purchase Successful!", description: "NFT bought successfully.", variant: "default" });

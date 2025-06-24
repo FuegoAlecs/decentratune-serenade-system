@@ -135,14 +135,29 @@ export function TrackCard({
     await buyTrack(id, listingPriceWei);
   };
 
-  const { data: nftOwnerAddress, isLoading: isLoadingNftOwner } = useReadContract(
-    isNFT && musicNftContractAddress ? {
-      address: musicNftContractAddress,
-      abi: musicNftAbi,
-      functionName: 'ownerOf',
-      args: [BigInt(id)], // Assuming id is tokenId and can be converted to BigInt
-    } : {} as any // Provide an empty object or handle undefined case if wagmi expects it
-  );
+  // Fetches the current on-chain owner of the NFT, used for the tip action.
+  // Prepare args and enabled flag for useReadContract to avoid errors with BigInt(id)
+  let ownerOfArgs: [bigint] | undefined;
+  let isOwnerOfQueryEnabled = false;
+  if (isNFT && musicNftContractAddress && id && typeof id === 'string' && id.trim() !== "") {
+    try {
+      ownerOfArgs = [BigInt(id)];
+      isOwnerOfQueryEnabled = true; // Only enable if BigInt conversion succeeds
+    } catch (e) {
+      console.warn(`TrackCard: Invalid id prop ('${id}') for BigInt conversion for ownerOf query.`);
+      // Keep isOwnerOfQueryEnabled = false; ownerOfArgs will be undefined
+    }
+  }
+
+  const { data: fetchedNftOwner, isLoading: isLoadingFetchedNftOwner } = useReadContract({
+    address: musicNftContractAddress,
+    abi: musicNftAbi,
+    functionName: 'ownerOf',
+    args: ownerOfArgs,
+    query: {
+      enabled: isOwnerOfQueryEnabled,
+    },
+  });
 
 
   const handleTipArtist = async () => {
@@ -150,12 +165,11 @@ export function TrackCard({
       toast({ title: "Invalid Tip Amount", description: "Please enter a valid amount greater than 0.", variant: "destructive" });
       return;
     }
-    if (!nftOwnerAddress) {
-        toast({ title: "Error", description: "Could not determine the owner of the NFT.", variant: "destructive" });
+    if (!fetchedNftOwner) { // Use the result from the refined useReadContract
+        toast({ title: "Error", description: "Could not determine the owner of the NFT to tip.", variant: "destructive" });
         return;
     }
-    // Ensure nftOwnerAddress is of type Address (string)
-    const owner = nftOwnerAddress as Address;
+    const owner = fetchedNftOwner as Address;
     await tipArtist(owner, tipAmountEth);
     // Success/error toasts are handled by the useEffect watching isTipConfirmed/tipError
   };
@@ -277,13 +291,13 @@ export function TrackCard({
                   value={tipAmountEth}
                   onChange={(e) => setTipAmountEth(e.target.value)}
                   className="h-8 text-xs sm:text-sm flex-grow"
-                  disabled={isProcessingTx || isLoadingNftOwner}
+                  disabled={isProcessingTx || isLoadingFetchedNftOwner}
                 />
                 <Button
                   size="sm"
                   className="btn-primary text-xs sm:text-sm px-2 py-1"
                   onClick={handleTipArtist}
-                  disabled={isProcessingTx || isLoadingNftOwner || !tipAmountEth || parseFloat(tipAmountEth) <= 0 || !nftOwnerAddress}
+                  disabled={isProcessingTx || isLoadingFetchedNftOwner || !tipAmountEth || parseFloat(tipAmountEth) <= 0 || !fetchedNftOwner}
                 >
                   {isTipPending || isConfirmingTip ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Tip"}
                 </Button>
@@ -292,7 +306,7 @@ export function TrackCard({
                   variant="ghost"
                   className="h-8 w-8 flex-shrink-0"
                   onClick={() => { setShowTipInput(false); setTipAmountEth(""); }}
-                  disabled={isProcessingTx || isLoadingNftOwner}
+                  disabled={isProcessingTx || isLoadingFetchedNftOwner}
                 >
                   <ListX className="h-4 w-4" />
                 </Button>
@@ -341,7 +355,7 @@ export function TrackCard({
                   variant="outline"
                   className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 hover:scale-105"
                   onClick={() => setShowTipInput(true)}
-                  disabled={isProcessingTx || isLoadingNftOwner}
+                  disabled={isProcessingTx || isLoadingFetchedNftOwner}
                 >
                   <Gift className="h-3 w-3 mr-1" /> Tip Artist
                 </Button>
