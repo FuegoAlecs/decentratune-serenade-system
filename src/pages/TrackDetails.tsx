@@ -24,10 +24,13 @@ import { Tag, ShoppingCart, ListX, ShieldCheck } from "lucide-react"; // Icons f
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
 // import tipJarAbi from "@/lib/abi/TipJar.json"; // Handled by the hook
+// Import the centralized contract address
+import { trackSaleV2ContractAddress } from "@/hooks/contracts";
+
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
-const trackSaleV2Address = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Added TrackSaleV2 address
+// const trackSaleV2Address = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Replaced by import
 
 interface NftMetadata {
   name?: string;
@@ -113,7 +116,7 @@ export default function TrackDetails() {
   } = useBuyNft({
     tokenId: tokenId,
     sellerAddress: nftContractData?.owner,
-    trackSaleV2Address: trackSaleV2Address,
+    trackSaleV2Address: trackSaleV2ContractAddress, // Use imported address
     musicNftAddress: musicNftContractAddress,
   });
 
@@ -288,7 +291,7 @@ export default function TrackDetails() {
         address: musicNftContractAddress,
         abi: musicNftAbi.abi,
         functionName: 'isApprovedForAll',
-        args: [latestOwner, trackSaleV2Address],
+        args: [latestOwner, trackSaleV2ContractAddress], // Use imported address
       }) as boolean;
 
       if (isLatestApproved) {

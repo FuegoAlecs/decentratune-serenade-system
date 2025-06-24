@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ipfsToHttp } from "@/lib/utils"; // Import the helper
 import { TrackCard } from "@/components/TrackCard"; // Import TrackCard
 import { OperatorApprovalButton } from "@/components/OperatorApprovalButton"; // Import the new component
+// Import the centralized contract address
+import { trackSaleV2ContractAddress } from "@/hooks/contracts";
 
 import musicNftAbi from "@/lib/abi/MusicNFT.json";
 import tipJarAbi from "@/lib/abi/TipJar.json";
@@ -19,7 +21,7 @@ const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Addre
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
 // Define trackSaleAddress (as it's hardcoded in contracts.ts and TrackDetails.tsx for now)
 // TODO: Centralize this address if it becomes configurable via .env as well
-const trackSaleAddress = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address;
+// const trackSaleAddress = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Replaced by import
 
 // Interface for NFT metadata (can be shared or defined per component if structures vary)
 interface NftMetadata {
@@ -410,14 +412,14 @@ export default function Profile() {
           if (connectedAddress && profileAddress && connectedAddress.toLowerCase() === profileAddress.toLowerCase()) {
             console.log('Profile.tsx - Rendering OperatorApprovalButton. Props:');
             console.log('Profile.tsx - musicNftAddress:', musicNftContractAddress);
-            console.log('Profile.tsx - trackSaleAddress:', trackSaleAddress);
+            console.log('Profile.tsx - trackSaleAddress:', trackSaleV2ContractAddress);
             console.log('Profile.tsx - userAddress (from connectedAddress):', connectedAddress);
             return (
               <div className="mb-8 p-4 sm:p-6 border border-white/10 rounded-lg glass-card">
                 <h2 className="text-xl font-satoshi font-semibold mb-4">Marketplace Settings</h2>
                 <OperatorApprovalButton
                   musicNftAddress={musicNftContractAddress}
-                  trackSaleAddress={trackSaleAddress}
+                  trackSaleAddress={trackSaleV2ContractAddress} // Use imported address
                   userAddress={connectedAddress} // Since this is user's own profile, userAddress is connectedAddress
                 />
               </div>
