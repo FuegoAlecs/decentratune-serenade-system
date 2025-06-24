@@ -7,7 +7,7 @@ import {
     // useReadContract, // May need for useTracksOwned if not using Alchemy, or for other hooks
     // useReadContracts // May need for useTracksOwned if not using Alchemy
 } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Added useQueryClient
 import { Alchemy, Network, type OwnedNft } from 'alchemy-sdk'; // Added Nft and Network
 
 import musicNftAbi from '@/lib/abi/MusicNFT.json';
@@ -91,11 +91,28 @@ export function useTipArtist() {
         status: tipStatus,
     } = useWriteContract();
 
+    const queryClient = useQueryClient(); // Get query client
+
     const {
         isLoading: isConfirming,
         isSuccess: isConfirmed,
-        error: confirmationError
-    } = useWaitForTransactionReceipt({ hash });
+        error: confirmationError,
+        data: tipReceipt, // Capture receipt to use its status
+    } = useWaitForTransactionReceipt({
+        hash,
+        onSuccess: (data) => { // Invalidate queries on successful confirmation
+            if (data.status === 'success') {
+                console.log('[useTipArtist] Tip transaction successful, invalidating tip history queries.');
+                // Invalidate queries related to tip history.
+                // These keys are educated guesses based on wagmi's patterns.
+                // Consider broader invalidation if specific keys are complex or numerous.
+                queryClient.invalidateQueries({ queryKey: ['readContract', tipJarContractAddress, 'getTipsSentByUser'] });
+                queryClient.invalidateQueries({ queryKey: ['readContract', tipJarContractAddress, 'getTipsReceivedByArtist'] });
+                // A broader approach if specific args for query keys are unknown/dynamic here:
+                // queryClient.invalidateQueries({ queryKey: ['readContract', tipJarContractAddress] });
+            }
+        }
+    });
 
     const tipArtist = async (artistAddress: Address, value: string) => {
         if (!tipJarContractAddress) {
@@ -301,6 +318,7 @@ export function useListTrackForSale() {
 
 
     const listTrack = async (tokenId: string, priceEth: string) => {
+        console.log(`[useListTrackForSale] listTrack called with tokenId: ${tokenId}, priceEth: ${priceEth}`);
         setOperationError(null);
         resetApprove();
         resetSetPrice();
@@ -336,126 +354,140 @@ export function useListTrackForSale() {
         let localPriceWei: bigint;
         try {
             localPriceWei = parseEther(priceEth);
+            console.log(`[useListTrackForSale] Parsed priceEth '${priceEth}' to localPriceWei: ${localPriceWei.toString()}`);
         } catch (e) {
-            console.error("Invalid price:", priceEth, e);
+            console.error(`[useListTrackForSale] Invalid priceEth format: '${priceEth}'`, e);
             setOperationError(new Error("Invalid price format."));
             setCurrentStep("error");
             return;
         }
         if (localPriceWei <= BigInt(0)) {
-            console.error("Price must be positive.");
+            console.error(`[useListTrackForSale] Price must be positive. Received: ${localPriceWei.toString()}`);
             setOperationError(new Error("Price must be positive."));
             setCurrentStep("error");
             return;
         }
 
-        const localTokenIdBigInt = BigInt(tokenId);
-        // Store details for potential use after approval
+        let localTokenIdBigInt: bigint;
+        try {
+            localTokenIdBigInt = BigInt(tokenId);
+            console.log(`[useListTrackForSale] Parsed tokenId '${tokenId}' to localTokenIdBigInt: ${localTokenIdBigInt.toString()}`);
+        } catch (e) {
+            console.error(`[useListTrackForSale] Invalid tokenId format for BigInt conversion: '${tokenId}'`, e);
+            setOperationError(new Error("Invalid tokenId format."));
+            setCurrentStep("error");
+            return;
+        }
+
         setPendingListingDetails({ tokenId: localTokenIdBigInt, priceWei: localPriceWei });
+        console.log(`[useListTrackForSale] Pending listing details set: tokenId=${localTokenIdBigInt.toString()}, priceWei=${localPriceWei.toString()}`);
 
         try {
             setCurrentStep("checkingApproval");
+            console.log(`[useListTrackForSale] Step: checkingApproval. TokenId: ${localTokenIdBigInt}, PriceWei: ${localPriceWei}`);
 
             // 1. Check isApprovedForAll first
-            console.log(`Checking isApprovedForAll for owner ${connectedAddress} to operator ${trackSaleV2ContractAddress}`);
+            console.log(`[useListTrackForSale] Checking isApprovedForAll for owner ${connectedAddress} to operator ${trackSaleV2ContractAddress}`);
             const isOperatorApproved = await publicClient.readContract({
-                address: musicNftContractAddress,
+                address: musicNftContractAddress!, // Added non-null assertion, checked above
                 abi: musicNftAbi,
                 functionName: 'isApprovedForAll',
-                args: [connectedAddress, trackSaleV2ContractAddress],
+                args: [connectedAddress!, trackSaleV2ContractAddress!], // Added non-null assertion
             });
-            console.log(`isApprovedForAll status: ${isOperatorApproved}`);
+            console.log(`[useListTrackForSale] isApprovedForAll status: ${isOperatorApproved}`);
 
             if (isOperatorApproved) {
-                console.log("Operator is approved. Proceeding directly to listing.");
+                console.log("[useListTrackForSale] Operator is approved. Proceeding directly to listing.");
                 await _proceedToListing(localTokenIdBigInt, localPriceWei);
                 return;
             }
 
             // 2. If not operator approved, check for single token approval
-            console.log(`Operator not globally approved. Checking single token approval for token ID: ${tokenId} to spender: ${trackSaleV2ContractAddress}`);
+            console.log(`[useListTrackForSale] Operator not globally approved. Checking single token approval for token ID: ${localTokenIdBigInt} to spender: ${trackSaleV2ContractAddress}`);
             const approvedAddress = await publicClient.readContract({
-                address: musicNftContractAddress,
+                address: musicNftContractAddress!, // Added non-null assertion
                 abi: musicNftAbi,
                 functionName: 'getApproved',
                 args: [localTokenIdBigInt],
             });
-            console.log(`Current single-token approved address for token ${tokenId}: ${approvedAddress}`);
+            console.log(`[useListTrackForSale] Current single-token approved address for token ${localTokenIdBigInt}: ${approvedAddress}`);
 
-            const isSingleTokenApproved = approvedAddress?.toLowerCase() === trackSaleV2ContractAddress.toLowerCase();
+            const isSingleTokenApproved = approvedAddress?.toLowerCase() === trackSaleV2ContractAddress!.toLowerCase();
 
             if (!isSingleTokenApproved) {
                 setCurrentStep("needsApproval");
-                console.log(`Single token approval needed for token ID: ${tokenId}. Requesting approval...`);
-
+                console.log(`[useListTrackForSale] Step: needsApproval. Single token approval needed for token ID: ${localTokenIdBigInt}. Requesting approval...`);
+                const approveArgs: readonly [`0x${string}`, bigint] = [trackSaleV2ContractAddress!, localTokenIdBigInt];
+                console.log(`[useListTrackForSale] Calling approveMusicNft with args: ${JSON.stringify(approveArgs)}`);
                 const approveTxHash = await approveMusicNft({
-                    address: musicNftContractAddress,
+                    address: musicNftContractAddress!, // Added non-null assertion
                     abi: musicNftAbi,
                     functionName: 'approve',
-                    args: [trackSaleV2ContractAddress, localTokenIdBigInt],
+                    args: approveArgs,
                 });
                 setApprovalHash(approveTxHash);
                 setCurrentStep("approving");
-                console.log(`Approval transaction sent: ${approveTxHash}. Waiting for confirmation...`);
-                // Return here; the useEffect watching isApproveConfirmed will handle the next step.
+                console.log(`[useListTrackForSale] Step: approving. Approval transaction sent: ${approveTxHash}. Waiting for confirmation...`);
                 return;
             }
 
-            // If already approved, proceed directly to listing
+            console.log(`[useListTrackForSale] Single token already approved. Proceeding directly to listing.`);
             await _proceedToListing(localTokenIdBigInt, localPriceWei);
 
         } catch (err: any) {
-            console.error("Error during listing initiation or approval check:", err);
+            console.error("[useListTrackForSale] Error during listing initiation or approval check:", err);
             setOperationError(err);
             setCurrentStep("error");
-            setPendingListingDetails(null); // Clear pending details on error
+            setPendingListingDetails(null);
         }
     };
 
-    // Internal function to handle the actual listing call
     const _proceedToListing = async (tokenIdToProcess: bigint, priceWeiToProcess: bigint) => {
+        console.log(`[useListTrackForSale] _proceedToListing called. TokenId: ${tokenIdToProcess}, PriceWei: ${priceWeiToProcess}`);
         try {
             setCurrentStep("listing");
-            console.log(`Proceeding to list token ${tokenIdToProcess.toString()} for ${priceWeiToProcess.toString()} wei.`);
-
+            console.log(`[useListTrackForSale] Step: listing. Proceeding to list token ${tokenIdToProcess.toString()} for ${priceWeiToProcess.toString()} wei.`);
+            const setPriceArgs: readonly [bigint, bigint] = [tokenIdToProcess, priceWeiToProcess];
+            console.log(`[useListTrackForSale] Calling setTrackPriceOnSaleContract with args: ${JSON.stringify(setPriceArgs)}`);
             const listTxHash = await setTrackPriceOnSaleContract({
-                address: trackSaleV2ContractAddress,
+                address: trackSaleV2ContractAddress!, // Added non-null assertion
                 abi: trackSaleV2Abi,
                 functionName: 'setTrackPrice',
-                args: [tokenIdToProcess, priceWeiToProcess],
+                args: setPriceArgs,
             });
             setListingHash(listTxHash);
-            console.log(`Set track price transaction sent: ${listTxHash}. Waiting for confirmation...`);
+            console.log(`[useListTrackForSale] Step: listing. Set track price transaction sent: ${listTxHash}. Waiting for confirmation...`);
         } catch (err: any) {
-            console.error("Error during setTrackPrice call:", err);
+            console.error("[useListTrackForSale] Error during setTrackPrice call:", err);
             setOperationError(err);
             setCurrentStep("error");
         } finally {
-            setPendingListingDetails(null); // Clear pending details after attempting to list
+            setPendingListingDetails(null);
         }
     };
 
-    // Effect to proceed automatically after approval confirmation
     useEffect(() => {
+        console.log(`[useListTrackForSale] Approval Effect: currentStep=${currentStep}, isApproveConfirmed=${isApproveConfirmed}, pendingListingDetails=${!!pendingListingDetails}`);
         if (currentStep === 'approving' && isApproveConfirmed && pendingListingDetails) {
             if (approveReceipt) {
+                console.log(`[useListTrackForSale] Approval receipt status: ${approveReceipt.status}`);
                 if (approveReceipt.status === 'success') {
-                    console.log('Approval confirmed. Automatically proceeding to list.');
+                    console.log('[useListTrackForSale] Approval confirmed. Automatically proceeding to list.');
                     _proceedToListing(pendingListingDetails.tokenId, pendingListingDetails.priceWei);
                 } else {
-                     console.error("Approval transaction reverted on-chain.");
+                     console.error("[useListTrackForSale] Approval transaction reverted on-chain.");
                      setOperationError(new Error("NFT Approval transaction failed (reverted)."));
                      setCurrentStep("error");
                      setPendingListingDetails(null);
                 }
             } else {
-                console.error("useListTrackForSale: approveReceipt is undefined even though isApproveConfirmed is true.");
+                console.error("[useListTrackForSale] approveReceipt is undefined even though isApproveConfirmed is true.");
                 setOperationError(new Error("Approval data missing despite confirmation. Please retry."));
                 setCurrentStep("error");
                 setPendingListingDetails(null);
             }
         } else if (currentStep === 'approving' && approveConfirmationError) {
-            console.error("Approval confirmation error (useWaitForTransactionReceipt):", approveConfirmationError);
+            console.error("[useListTrackForSale] Approval confirmation error (useWaitForTransactionReceipt):", approveConfirmationError);
             setOperationError(new Error(`Approval failed: ${approveConfirmationError.message}`));
             setCurrentStep("error");
             setPendingListingDetails(null);
@@ -463,17 +495,19 @@ export function useListTrackForSale() {
     }, [isApproveConfirmed, approveConfirmationError, approveReceipt, currentStep, pendingListingDetails]);
 
     useEffect(() => {
+        console.log(`[useListTrackForSale] Listing Effect: currentStep=${currentStep}, isListingConfirmed=${isListingConfirmed}`);
         if (currentStep === 'listing' && isListingConfirmed && listingReceipt) {
+            console.log(`[useListTrackForSale] Listing receipt status: ${listingReceipt.status}`);
              if (listingReceipt.status === 'success') {
-                console.log('Listing confirmed!');
+                console.log('[useListTrackForSale] Listing confirmed!');
                 setCurrentStep("success");
             } else {
-                console.error("Listing transaction reverted.");
+                console.error("[useListTrackForSale] Listing transaction reverted.");
                 setOperationError(new Error("Set track price transaction failed."));
                 setCurrentStep("error");
             }
         } else if (currentStep === 'listing' && listingConfirmationError) {
-            console.error("Listing confirmation error:", listingConfirmationError);
+            console.error("[useListTrackForSale] Listing confirmation error:", listingConfirmationError);
             setOperationError(listingConfirmationError);
             setCurrentStep("error");
         }

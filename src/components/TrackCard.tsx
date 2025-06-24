@@ -119,6 +119,7 @@ export function TrackCard({
       toast({ title: "Invalid Price", description: "Please enter a valid price greater than 0.", variant: "destructive" });
       return;
     }
+    console.log(`[TrackCard] handleListTrack: Calling listTrack hook with id: ${id}, priceEth: ${listPriceEth}`);
     await listTrack(id, listPriceEth);
     setShowPriceInput(false);
   };

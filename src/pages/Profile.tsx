@@ -212,7 +212,12 @@ export default function Profile() {
   // Effect for processing raw tip data and fetching additional metadata
   useEffect(() => {
     const processAndEnrichTips = async () => {
+      console.log('[ProfilePage] processAndEnrichTips called.');
+      console.log('[ProfilePage] Raw sentTipsData:', JSON.stringify(sentTipsData, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+      console.log('[ProfilePage] Raw receivedTipsData:', JSON.stringify(receivedTipsData, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+
       if (!sentTipsData && !receivedTipsData) {
+        console.log('[ProfilePage] No tip data to process.');
         setProcessedTipHistory([]);
         setIsLoadingTipHistory(false);
         return;
@@ -235,6 +240,7 @@ export default function Profile() {
           combinedRawTips.push({ ...tip, type: 'received' });
         });
       }
+      console.log('[ProfilePage] Processing tips. Combined raw tips:', JSON.stringify(combinedRawTips, (key, value) => typeof value === 'bigint' ? value.toString() : value));
 
       // Deduplicate tips by transaction hash if available, or a composite key
       // For now, assuming the contract calls return unique sets or events don't overlap in this simple fetch.
@@ -294,17 +300,22 @@ export default function Profile() {
 
       const resolvedEnrichedTips = await Promise.all(enrichedTipsPromises);
       resolvedEnrichedTips.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)); // Sort by newest first
+      console.log('[ProfilePage] Enriched and sorted tips:', JSON.stringify(resolvedEnrichedTips, (key, value) => typeof value === 'bigint' ? value.toString() : value));
 
       setProcessedTipHistory(resolvedEnrichedTips);
       setTotalTipsSent(sentSum);
       setTotalTipsReceived(receivedSum);
       setIsLoadingTipHistory(false);
+      console.log('[ProfilePage] Finished processing tips.');
     };
 
+    console.log(`[ProfilePage] Tip history useEffect trigger: isLoadingSentTips=${isLoadingSentTips}, isLoadingReceivedTips=${isLoadingReceivedTips}, isCheckingArtistStatus=${isCheckingArtistStatus}, profileAddress=${profileAddress}, tipJarContractAddress=${tipJarContractAddress}`);
     if ((profileAddress && tipJarContractAddress) && (isLoadingSentTips || isLoadingReceivedTips || isCheckingArtistStatus)) {
       // Still waiting for initial data or artist status
+      console.log('[ProfilePage] Tip history: Still waiting for initial data or artist status.');
       setIsLoadingTipHistory(true);
     } else {
+      console.log('[ProfilePage] Tip history: Proceeding to processAndEnrichTips.');
       processAndEnrichTips();
     }
   }, [sentTipsData, receivedTipsData, isArtistProfile, profileAddress, tipJarContractAddress, musicNftContractAddress, isLoadingSentTips, isLoadingReceivedTips, isCheckingArtistStatus, chain?.id]);
