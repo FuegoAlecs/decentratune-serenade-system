@@ -79,9 +79,11 @@ export default function Profile() {
     fanName?: string; // ENS or formatted address
     formattedDate?: string;
     formattedAmount?: string;
+    fromEnsName?: string;
+    toArtistEnsName?: string;
   }
-  const [tipHistory, setTipHistory] = useState<Tip[]>([]);
-  const [isLoadingTipHistory, setIsLoadingTipHistory] = useState(false);
+  const [processedTipHistory, setProcessedTipHistory] = useState<Tip[]>([]); // Renamed from tipHistory for clarity
+  const [isLoadingTipHistory, setIsLoadingTipHistory] = useState(true); // Default to true
   const [totalTipsSent, setTotalTipsSent] = useState<bigint>(BigInt(0));
   const [totalTipsReceived, setTotalTipsReceived] = useState<bigint>(BigInt(0));
   const [isArtistProfile, setIsArtistProfile] = useState<boolean>(false);
@@ -207,52 +209,105 @@ export default function Profile() {
     query: { enabled: !!profileAddress && !!tipJarContractAddress && isArtistProfile }, // Depends on dynamic isArtistProfile
   });
 
+  // Effect for processing raw tip data and fetching additional metadata
   useEffect(() => {
-    setIsLoadingTipHistory(true);
-    let combinedTips: Tip[] = [];
-    let sentSum = BigInt(0);
-    let receivedSum = BigInt(0);
+    const processAndEnrichTips = async () => {
+      if (!sentTipsData && !receivedTipsData) {
+        setProcessedTipHistory([]);
+        setIsLoadingTipHistory(false);
+        return;
+      }
+      setIsLoadingTipHistory(true);
 
-    if (sentTipsData) {
-      const processedSentTips = (sentTipsData as Tip[]).map(tip => {
-        sentSum += tip.amount;
+      let combinedRawTips: Omit<Tip, 'type' | 'trackName' | 'artistName' | 'fanName' | 'formattedDate' | 'formattedAmount'>[] = [];
+      let sentSum = BigInt(0);
+      let receivedSum = BigInt(0);
+
+      if (sentTipsData) {
+        (sentTipsData as any[]).forEach(tip => {
+          sentSum += tip.amount;
+          combinedRawTips.push({ ...tip, type: 'sent' });
+        });
+      }
+      if (receivedTipsData && isArtistProfile) {
+        (receivedTipsData as any[]).forEach(tip => {
+          receivedSum += tip.amount;
+          combinedRawTips.push({ ...tip, type: 'received' });
+        });
+      }
+
+      // Deduplicate tips by transaction hash if available, or a composite key
+      // For now, assuming the contract calls return unique sets or events don't overlap in this simple fetch.
+      // If Tip objects had a unique `id` or `txHash`, deduplication would be more robust.
+
+      // Fetch metadata for all tips
+      const enrichedTipsPromises = combinedRawTips.map(async (rawTip) => {
+        let trackName = `Track ID ${rawTip.trackId.toString()}`;
+        let fromEns: string | null = null;
+        let toArtistEns: string | null = null;
+
+        // 1. Fetch Track Name
+        if (musicNftContractAddress && rawTip.trackId) {
+          try {
+            // This is a simplified way. In a real app, you'd use useReadContract or a batching solution for multiple URIs.
+            // For simplicity in this useEffect, we'll do a direct fetch.
+            // This is NOT ideal for performance if there are many tips, consider useReadContracts.
+            const tokenUriResult = await (window as any).ethereum?.request({ // Using window.ethereum for direct call, replace with wagmi's publicClient if preferred
+                method: 'eth_call',
+                params: [{
+                    to: musicNftContractAddress,
+                    data: new (await import('ethers')).Interface(musicNftAbi).encodeFunctionData('tokenURI', [rawTip.trackId])
+                }, 'latest']
+            });
+            if (tokenUriResult) {
+                 const iface = new (await import('ethers')).Interface(musicNftAbi);
+                 const decodedUri = iface.decodeFunctionResult('tokenURI', tokenUriResult)[0];
+                 if (typeof decodedUri === 'string' && decodedUri) {
+                    const metadataResponse = await fetch(ipfsToHttp(decodedUri));
+                    if (metadataResponse.ok) {
+                        const metadata = await metadataResponse.json();
+                        trackName = metadata.name || trackName;
+                    }
+                 }
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch metadata for track ${rawTip.trackId}:`, e);
+          }
+        }
+
+        // 2. Fetch ENS names (example, ideally useEnsName would be batched or managed outside if many unique addresses)
+        // This is also simplified. For many unique addresses, direct useEnsName calls in map aren't ideal.
+        // However, wagmi's useEnsName is hook-based, not easily callable in a loop like this.
+        // A more complex solution would involve collecting all unique addresses and fetching ENS names once.
+        // For now, we'll skip direct ENS fetching in this loop to avoid complexity with hooks.
+        // Placeholder: ENS names would be fetched and set here.
+
         return {
-          ...tip,
-          type: 'sent' as 'sent',
-          // TODO: Fetch trackName using tip.trackId -> tokenURI -> metadata.name
-          // TODO: Fetch artistName (ENS/address) for tip.toArtist
-          // For now, using placeholders or direct values:
-          trackName: `Track ID ${tip.trackId.toString()}`,
-          artistName: `${tip.toArtist.slice(0,6)}...`,
-          formattedDate: new Date(Number(tip.timestamp) * 1000).toLocaleDateString(),
-          formattedAmount: formatEther(tip.amount),
-        };
+          ...rawTip,
+          trackName,
+          artistName: rawTip.type === 'sent' ? `${rawTip.toArtist.slice(0, 6)}...` : undefined, // Placeholder
+          fanName: rawTip.type === 'received' ? `${rawTip.from.slice(0, 6)}...` : undefined, // Placeholder
+          formattedDate: new Date(Number(rawTip.timestamp) * 1000).toLocaleDateString(),
+          formattedAmount: formatEther(rawTip.amount),
+        } as Tip;
       });
-      combinedTips = combinedTips.concat(processedSentTips);
+
+      const resolvedEnrichedTips = await Promise.all(enrichedTipsPromises);
+      resolvedEnrichedTips.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)); // Sort by newest first
+
+      setProcessedTipHistory(resolvedEnrichedTips);
+      setTotalTipsSent(sentSum);
+      setTotalTipsReceived(receivedSum);
+      setIsLoadingTipHistory(false);
+    };
+
+    if ((profileAddress && tipJarContractAddress) && (isLoadingSentTips || isLoadingReceivedTips || isCheckingArtistStatus)) {
+      // Still waiting for initial data or artist status
+      setIsLoadingTipHistory(true);
+    } else {
+      processAndEnrichTips();
     }
-
-    if (receivedTipsData && isArtistProfile) {
-      const processedReceivedTips = (receivedTipsData as Tip[]).map(tip => {
-        receivedSum += tip.amount;
-        return {
-          ...tip,
-          type: 'received' as 'received',
-          trackName: `Track ID ${tip.trackId.toString()}`,
-          fanName: `${tip.from.slice(0,6)}...`, // TODO: Fetch ENS for tip.from
-          formattedDate: new Date(Number(tip.timestamp) * 1000).toLocaleDateString(),
-          formattedAmount: formatEther(tip.amount),
-        };
-      });
-      combinedTips = combinedTips.concat(processedReceivedTips);
-    }
-
-    combinedTips.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)); // Sort by newest first
-    setTipHistory(combinedTips);
-    setTotalTipsSent(sentSum);
-    setTotalTipsReceived(receivedSum);
-    setIsLoadingTipHistory(false);
-
-  }, [sentTipsData, receivedTipsData, isArtistProfile]);
+  }, [sentTipsData, receivedTipsData, isArtistProfile, profileAddress, tipJarContractAddress, musicNftContractAddress, isLoadingSentTips, isLoadingReceivedTips, isCheckingArtistStatus, chain?.id]);
   // --- End Fetching Tip History ---
 
 
@@ -418,11 +473,41 @@ export default function Profile() {
         )}
 
         {activeTab === "tips" && (
-          // TODO: Implement fetching and display for tip history
-          <div className="space-y-4">
-            {/* Tip history display will be implemented here, currently shows "coming soon" */}
-            <p className="text-center text-dt-gray-light py-10">Tip history coming soon.</p>
-          </div>
+          isLoadingTipHistory ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-dt-primary" />
+              <p className="ml-3">Loading tip history...</p>
+            </div>
+          ) : processedTipHistory.length === 0 ? (
+            <p className="text-center text-dt-gray-light py-10">No tip history found.</p>
+          ) : (
+            <div className="space-y-4">
+              {processedTipHistory.map((tip, index) => (
+                <div key={index} className="p-4 border border-white/10 rounded-lg glass-card-muted flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex-1">
+                    <div className="font-semibold text-light-text-primary dark:text-dark-text-primary">
+                      {tip.type === 'sent' ? 'Sent Tip to ' : 'Received Tip from '}
+                      <Link
+                        to={`/profile/${tip.type === 'sent' ? tip.toArtist : tip.from}`}
+                        className="text-dt-primary hover:underline"
+                      >
+                        {tip.type === 'sent' ? (tip.toArtistEnsName || tip.artistName) : (tip.fromEnsName || tip.fanName)}
+                      </Link>
+                    </div>
+                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                      For Track: <span className="font-medium text-light-text-primary dark:text-dark-text-primary">{tip.trackName}</span> (ID: {tip.trackId.toString()})
+                    </p>
+                    <p className="text-xs text-dt-gray-light">{tip.formattedDate}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold text-lg ${tip.type === 'sent' ? 'text-red-400' : 'text-green-400'}`}>
+                      {tip.type === 'sent' ? '-' : '+'} {tip.formattedAmount} ETH
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>

@@ -1,18 +1,23 @@
-import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2 } from "lucide-react";
+import { Play, Heart, MoreHorizontal, Coins, Download, Check, Tag, ShoppingCart, ListX, Loader2, Gift } from "lucide-react"; // Added Gift
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; // For price input
 import { useState, useEffect } from "react";
 import { useAudio } from "@/contexts/AudioContext";
 import { Link } from "react-router-dom";
-import { useAccount } from "wagmi";
-import { formatEther, parseEther } from "ethers"; // viem's formatEther, parseEther
+import { useAccount, useReadContract } from "wagmi"; // Added useReadContract
+import { formatEther, parseEther, type Address } from "ethers"; // viem's formatEther, parseEther, Added Address
 import {
     useGetListing,
     useListTrackForSale,
     useDelistTrack,
-    useBuyTrack
-} from "@/hooks/contracts"; // Import the new hooks
+    useBuyTrack,
+    useTipArtist // Import the new hook
+} from "@/hooks/contracts";
 import { useToast } from "@/components/ui/use-toast"; // For notifications
+import musicNftAbi from "@/lib/abi/MusicNFT.json"; // Import MusicNFT ABI
+
+const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
+
 
 interface TrackCardProps {
   id: string; // Token ID (tokenId)
@@ -44,6 +49,8 @@ export function TrackCard({
   const [showConfetti, setShowConfetti] = useState(false);
   const [showPriceInput, setShowPriceInput] = useState(false);
   const [listPriceEth, setListPriceEth] = useState("");
+  const [showTipInput, setShowTipInput] = useState(false); // State for tip input visibility
+  const [tipAmountEth, setTipAmountEth] = useState(""); // State for tip amount
 
   const { playTrack, currentTrack, isPlaying, isLoading: isAudioLoading } = useAudio();
   const { address: connectedAddress } = useAccount();
@@ -56,18 +63,25 @@ export function TrackCard({
   const { listTrack, isListPending, isConfirmingList, listError, isListConfirmed } = useListTrackForSale();
   const { delistTrack, isDelistPending, isConfirmingDelist, delistError, isDelistConfirmed } = useDelistTrack();
   const { buyTrack, isBuyPending, isConfirmingBuy, buyError, isBuyConfirmed } = useBuyTrack();
+  const { tipArtist, tipHash, isTipPending, tipError, tipStatus, isConfirmingTip, isTipConfirmed, tipConfirmationError } = useTipArtist();
 
-  const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy;
+  const isProcessingTx = isListPending || isConfirmingList || isDelistPending || isConfirmingDelist || isBuyPending || isConfirmingBuy || isTipPending || isConfirmingTip;
 
   useEffect(() => {
-    if (isListConfirmed || isDelistConfirmed || isBuyConfirmed) {
+    if (isListConfirmed || isDelistConfirmed || isBuyConfirmed || isTipConfirmed) {
       toast({ title: "Transaction Confirmed", description: "Your transaction has been confirmed." });
-      refetchListing();
+      if (isListConfirmed || isDelistConfirmed || isBuyConfirmed) refetchListing();
+      if (isTipConfirmed) {
+        setShowTipInput(false);
+        setTipAmountEth("");
+      }
     }
     if (listError) toast({ title: "Listing Error", description: listError.message, variant: "destructive" });
     if (delistError) toast({ title: "Delisting Error", description: delistError.message, variant: "destructive" });
     if (buyError) toast({ title: "Purchase Error", description: buyError.message, variant: "destructive" });
-  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, listError, delistError, buyError, toast, refetchListing]);
+    if (tipError) toast({ title: "Tip Error", description: tipError.message, variant: "destructive" });
+    if (tipConfirmationError) toast({ title: "Tip Confirmation Error", description: tipConfirmationError.message, variant: "destructive" });
+  }, [isListConfirmed, isDelistConfirmed, isBuyConfirmed, isTipConfirmed, listError, delistError, buyError, tipError, tipConfirmationError, toast, refetchListing]);
 
   const isCurrentTrackPlaying = currentTrack?.id === id && isPlaying;
   const isCurrentTrackLoading = currentTrack?.id === id && isAudioLoading;
@@ -120,6 +134,32 @@ export function TrackCard({
     }
     await buyTrack(id, listingPriceWei);
   };
+
+  const { data: nftOwnerAddress, isLoading: isLoadingNftOwner } = useReadContract(
+    isNFT && musicNftContractAddress ? {
+      address: musicNftContractAddress,
+      abi: musicNftAbi,
+      functionName: 'ownerOf',
+      args: [BigInt(id)], // Assuming id is tokenId and can be converted to BigInt
+    } : {} as any // Provide an empty object or handle undefined case if wagmi expects it
+  );
+
+
+  const handleTipArtist = async () => {
+    if (!tipAmountEth || parseFloat(tipAmountEth) <= 0) {
+      toast({ title: "Invalid Tip Amount", description: "Please enter a valid amount greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (!nftOwnerAddress) {
+        toast({ title: "Error", description: "Could not determine the owner of the NFT.", variant: "destructive" });
+        return;
+    }
+    // Ensure nftOwnerAddress is of type Address (string)
+    const owner = nftOwnerAddress as Address;
+    await tipArtist(owner, tipAmountEth);
+    // Success/error toasts are handled by the useEffect watching isTipConfirmed/tipError
+  };
+
 
   return (
     <div
@@ -227,13 +267,45 @@ export function TrackCard({
             )}
           </div>
 
-          <div className="flex flex-col items-end space-y-2 mt-2 sm:mt-0 w-full sm:w-auto"> {/* Ensure this div takes necessary width or specific width for price input */}
+          <div className="flex flex-col items-end space-y-2 mt-2 sm:mt-0 w-full sm:w-auto">
+            {/* Tip Input UI */}
+            {isNFT && showTipInput && connectedAddress && !isOwned && (
+              <div className="flex items-center space-x-2 w-full">
+                <Input
+                  type="number"
+                  placeholder="Tip (ETH)"
+                  value={tipAmountEth}
+                  onChange={(e) => setTipAmountEth(e.target.value)}
+                  className="h-8 text-xs sm:text-sm flex-grow"
+                  disabled={isProcessingTx || isLoadingNftOwner}
+                />
+                <Button
+                  size="sm"
+                  className="btn-primary text-xs sm:text-sm px-2 py-1"
+                  onClick={handleTipArtist}
+                  disabled={isProcessingTx || isLoadingNftOwner || !tipAmountEth || parseFloat(tipAmountEth) <= 0 || !nftOwnerAddress}
+                >
+                  {isTipPending || isConfirmingTip ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Tip"}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => { setShowTipInput(false); setTipAmountEth(""); }}
+                  disabled={isProcessingTx || isLoadingNftOwner}
+                >
+                  <ListX className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* List for Sale Input UI */}
             {isNFT && showPriceInput && isOwned && (
-              <div className="flex items-center space-x-2 w-full"> {/* Ensure this div takes necessary width or specific width for price input */}
+              <div className="flex items-center space-x-2 w-full">
                 <Input
                   type="number" placeholder="Price (ETH)" value={listPriceEth}
                   onChange={(e) => setListPriceEth(e.target.value)}
-                  className="h-8 text-xs sm:text-sm flex-grow" // Added flex-grow
+                  className="h-8 text-xs sm:text-sm flex-grow"
                   disabled={isProcessingTx}
                 />
                 <Button
@@ -244,8 +316,8 @@ export function TrackCard({
                   {isListPending || isConfirmingList ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
                 </Button>
                 <Button
-                  size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" // Added flex-shrink-0
-                  onClick={() => setShowPriceInput(false)}
+                  size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0"
+                  onClick={() => { setShowPriceInput(false); setListPriceEth("");}}
                   disabled={isProcessingTx}
                 >
                   <ListX className="h-4 w-4" />
@@ -253,7 +325,7 @@ export function TrackCard({
               </div>
             )}
 
-            <div className="flex items-center space-x-1 sm:space-x-2 self-end"> {/* Removed sm:self-center to align with potential full-width input */}
+            <div className="flex items-center space-x-1 sm:space-x-2 self-end">
               <Button
                 variant="ghost" size="icon" onClick={handleLike}
                 className={`${liked ? 'text-red-500 scale-110' : 'text-light-text-secondary dark:text-dark-text-secondary'} hover:text-red-500 hover:scale-110 transition-all duration-200 p-1.5 sm:p-2`}
@@ -261,6 +333,19 @@ export function TrackCard({
               >
                 <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
               </Button>
+
+              {/* Tip Button */}
+              {isNFT && connectedAddress && !isOwned && !showTipInput && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 hover:scale-105"
+                  onClick={() => setShowTipInput(true)}
+                  disabled={isProcessingTx || isLoadingNftOwner}
+                >
+                  <Gift className="h-3 w-3 mr-1" /> Tip Artist
+                </Button>
+              )}
 
               {/* Sale related buttons */}
               {isNFT && connectedAddress && isOwned && !showPriceInput && (
