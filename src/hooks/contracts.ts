@@ -16,7 +16,7 @@ import trackSaleV2Abi from '@/lib/abi/TrackSaleV2.json'; // Import the new ABI
 
 const musicNftContractAddress = import.meta.env.VITE_CONTRACT_MUSIC_NFT as Address | undefined;
 const tipJarContractAddress = import.meta.env.VITE_CONTRACT_TIP_JAR as Address | undefined;
-const trackSaleV2ContractAddress = "0x542ba58b04c2f0bb9951b5c226d67c7395b78091" as Address; // Add new contract address
+const trackSaleV2ContractAddress = import.meta.env.VITE_CONTRACT_TRACK_SALE_V2 as Address | undefined; // Add new contract address
 const alchemyApiKey = import.meta.env.VITE_ALCHEMY_KEY;
 
 // Configure Alchemy SDK

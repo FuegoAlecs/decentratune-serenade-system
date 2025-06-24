@@ -136,14 +136,6 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
     return <div className={className}>Required addresses not provided for approval component.</div>;
   }
 
-  if (errorLoadingApprovalStatus) {
-    return (
-      <div className={`text-red-500 ${className}`}>
-        Error loading approval status: {errorLoadingApprovalStatus.message}
-      </div>
-    );
-  }
-
   return (
     <div className={`p-4 border rounded-lg space-y-3 ${className}`}>
       <h3 className="font-semibold text-lg">Marketplace Operator Approval</h3>
@@ -152,13 +144,18 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
       <div>
         <span className="text-sm font-medium">Current Status: </span>
         {isLoadingApprovalStatus && <Loader2 className="h-4 w-4 animate-spin inline-block ml-2" />}
-        {!isLoadingApprovalStatus && isCurrentlyApproved !== undefined && (
+        {!isLoadingApprovalStatus && errorLoadingApprovalStatus && (
+            <span className="text-red-500 font-semibold">
+              Error: {errorLoadingApprovalStatus.shortMessage || errorLoadingApprovalStatus.message}
+            </span>
+        )}
+        {!isLoadingApprovalStatus && !errorLoadingApprovalStatus && isCurrentlyApproved !== undefined && (
           <span className={isCurrentlyApproved ? 'text-green-600 font-semibold' : 'text-orange-600 font-semibold'}>
             {isCurrentlyApproved ? 'Approved' : 'Not Approved'}
           </span>
         )}
-         {!isLoadingApprovalStatus && isCurrentlyApproved === undefined && (
-            <span className="text-gray-500">Unknown (possibly wrong network or parameters)</span>
+         {!isLoadingApprovalStatus && !errorLoadingApprovalStatus && isCurrentlyApproved === undefined && (
+            <span className="text-gray-500">Unknown (ensure correct network/params & owner)</span>
         )}
       </div>
 
