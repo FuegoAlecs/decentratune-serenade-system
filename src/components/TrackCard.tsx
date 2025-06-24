@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/components/ui/use-toast"; // For notifications
 
 // Placeholder - this should ideally come from a config file or environment variable
-const TRACK_SALE_CONTRACT_ADDRESS = "0xYourTrackSaleContractAddressHere" as `0x${string}`;
+const TRACK_SALE_CONTRACT_ADDRESS = "0x0BF1029dac7C8BC22F82Ce1d90dEBb22B05bc441" as `0x${string}`;
 
 // Minimal ABI for ERC721/ERC1155 isApprovedForAll and setApprovalForAll
 const erc721ApprovalAbi = [
