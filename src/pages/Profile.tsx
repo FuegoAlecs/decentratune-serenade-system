@@ -340,16 +340,25 @@ export default function Profile() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-6 sm:p-6">
         {/* Marketplace Settings Section - Visible only on own profile */}
-        {connectedAddress && profileAddress && connectedAddress.toLowerCase() === profileAddress.toLowerCase() && (
-          <div className="mb-8 p-4 sm:p-6 border border-white/10 rounded-lg glass-card">
-            <h2 className="text-xl font-satoshi font-semibold mb-4">Marketplace Settings</h2>
-            <OperatorApprovalButton
-              musicNftAddress={musicNftContractAddress}
-              trackSaleAddress={trackSaleAddress}
-              userAddress={connectedAddress} // Since this is user's own profile, userAddress is connectedAddress
-            />
-          </div>
-        )}
+        {(() => {
+          if (connectedAddress && profileAddress && connectedAddress.toLowerCase() === profileAddress.toLowerCase()) {
+            console.log('Profile.tsx - Rendering OperatorApprovalButton. Props:');
+            console.log('Profile.tsx - musicNftAddress:', musicNftContractAddress);
+            console.log('Profile.tsx - trackSaleAddress:', trackSaleAddress);
+            console.log('Profile.tsx - userAddress (from connectedAddress):', connectedAddress);
+            return (
+              <div className="mb-8 p-4 sm:p-6 border border-white/10 rounded-lg glass-card">
+                <h2 className="text-xl font-satoshi font-semibold mb-4">Marketplace Settings</h2>
+                <OperatorApprovalButton
+                  musicNftAddress={musicNftContractAddress}
+                  trackSaleAddress={trackSaleAddress}
+                  userAddress={connectedAddress} // Since this is user's own profile, userAddress is connectedAddress
+                />
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
           <Button variant={activeTab === "owned" ? "default" : "ghost"} onClick={() => setActiveTab("owned")} className="flex items-center space-x-2"> <Music className="h-4 w-4" /> <span>Owned Tracks</span> </Button>

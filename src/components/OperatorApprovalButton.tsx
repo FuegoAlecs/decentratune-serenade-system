@@ -24,6 +24,11 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
   userAddress,
   className,
 }) => {
+  console.log('OperatorApprovalButton Mounted. Received props:');
+  console.log('  musicNftAddress:', musicNftAddress);
+  console.log('  trackSaleAddress:', trackSaleAddress);
+  console.log('  userAddress (owner):', userAddress);
+
   const { address: connectedWalletAddress } = useAccount(); // Wallet connected to the dapp
 
   // State for the approval transaction hash
