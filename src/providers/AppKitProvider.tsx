@@ -16,10 +16,10 @@ const wagmiConfig = createConfig({
     // e.g., walletConnect({ projectId: 'YOUR_WALLETCONNECT_PROJECT_ID' })
   ],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-    // Example for a specific RPC for a chain:
-    // [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY`),
+    [mainnet.id]: http(import.meta.env.VITE_MAINNET_RPC_URL || undefined),
+    [sepolia.id]: http(import.meta.env.VITE_SEPOLIA_RPC_URL || undefined),
+    // Ensure VITE_MAINNET_RPC_URL and VITE_SEPOLIA_RPC_URL are set in your .env file
+    // Example: VITE_SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY
   },
   // ssr: true, // Enable SSR if needed, ensure this works with Vite's SSR approach
 });
