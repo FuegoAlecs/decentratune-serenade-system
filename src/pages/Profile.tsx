@@ -410,10 +410,15 @@ export default function Profile() {
         {/* Marketplace Settings Section - Visible only on own profile */}
         {(() => {
           if (connectedAddress && profileAddress && connectedAddress.toLowerCase() === profileAddress.toLowerCase()) {
-            console.log('Profile.tsx - Rendering OperatorApprovalButton. Props:');
-            console.log('Profile.tsx - musicNftAddress:', musicNftContractAddress);
-            console.log('Profile.tsx - trackSaleAddress:', trackSaleV2ContractAddress);
-            console.log('Profile.tsx - userAddress (from connectedAddress):', connectedAddress);
+            console.log('[ProfilePage] Preparing to render OperatorApprovalButton. Checking props:');
+            console.log('[ProfilePage]   VITE_CONTRACT_MUSIC_NFT (musicNftContractAddress):', musicNftContractAddress);
+            console.log('[ProfilePage]   VITE_CONTRACT_TRACK_SALE_V2 (trackSaleV2ContractAddress):', trackSaleV2ContractAddress);
+            console.log('[ProfilePage]   Connected Wallet (userAddress for button):', connectedAddress);
+
+            if (!musicNftContractAddress || !trackSaleV2ContractAddress || !connectedAddress) {
+              console.error('[ProfilePage] CRITICAL: One or more addresses for OperatorApprovalButton are undefined. Button may not work correctly.');
+            }
+
             return (
               <div className="mb-8 p-4 sm:p-6 border border-white/10 rounded-lg glass-card">
                 <h2 className="text-xl font-satoshi font-semibold mb-4">Marketplace Settings</h2>
