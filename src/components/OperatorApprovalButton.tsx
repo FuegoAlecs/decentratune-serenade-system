@@ -39,7 +39,9 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
     data: isCurrentlyApproved,
     isLoading: isLoadingApprovalStatus,
     error: errorLoadingApprovalStatus,
-    refetch: refetchApprovalStatus
+    refetch: refetchApprovalStatus,
+    status: readStatus, // Capture status
+    isFetching: isFetchingApprovalStatus, // Capture isFetching
   } = useReadContract({
     address: musicNftAddress,
     abi: MusicNftAbi.abi,
@@ -107,6 +109,18 @@ export const OperatorApprovalButton: React.FC<OperatorApprovalButtonProps> = ({
         });
     }
   }, [errorSubmittingApprovalTx]);
+
+  // Effect for logging status of isApprovedForAll read
+  useEffect(() => {
+    console.log('[OpApprovalButton] isApprovedForAll read status:', {
+      isLoading: isLoadingApprovalStatus,
+      isFetching: isFetchingApprovalStatus,
+      status: readStatus,
+      data: isCurrentlyApproved,
+      error: errorLoadingApprovalStatus,
+      props: { musicNftAddress, trackSaleAddress, userAddress }
+    });
+  }, [isLoadingApprovalStatus, isFetchingApprovalStatus, readStatus, isCurrentlyApproved, errorLoadingApprovalStatus, musicNftAddress, trackSaleAddress, userAddress]);
 
 
   const handleToggleApproval = async () => {
